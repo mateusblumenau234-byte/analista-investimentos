@@ -31,6 +31,7 @@ import fontes as fx  # noqa: E402
 import fundamentos as fd  # noqa: E402
 import memoria as mem  # noqa: E402
 import mercados as mk  # noqa: E402
+import provedores as pv  # noqa: E402
 import sec as sc  # noqa: E402
 import valuation as vl  # noqa: E402
 
@@ -433,16 +434,16 @@ def main() -> int:
     w("")
 
     # ---------------- 5b. Contexto mundial
-    pg = C.etapa("Painel global (Yahoo)", fx.painel_global)
-    w("## 7b. Contexto mundial [DADO OBSERVADO — Yahoo Finance]\n")
+    pg = C.etapa("Painel global (Yahoo + FRED)", fx.painel_global)
+    w("## 7b. Contexto mundial [DADO OBSERVADO — Yahoo Finance e FRED]\n")
     if pg is not None and len(pg):
         pg.to_csv(out / "painel_global.csv", index=False)
         C.dados["painel_global"] = pg.to_dict("records")
-        w("| Grupo | Indicador | Último | Data | 1 mês | 3 meses | 12 meses |\n|---|---|---|---|---|---|---|")
+        w("| Grupo | Indicador | Último | Data | 1 mês | 3 meses | 12 meses | Fonte |\n|---|---|---|---|---|---|---|---|")
         for r in pg.itertuples():
             fv = (lambda v: "n/d" if v is None or pd.isna(v) else f"{v:+.2f} p.p.".replace(".", ",")) \
                 if r.unidade_var == "p.p." else (lambda v: fmt(v, "roe"))
-            w(f"| {r.grupo} | {r.nome} | {fmt(r.ultimo)} | {r.data} | {fv(r.var_1m)} | {fv(r.var_3m)} | {fv(r.var_12m)} |")
+            w(f"| {r.grupo} | {r.nome} | {fmt(r.ultimo)} | {r.data} | {fv(r.var_1m)} | {fv(r.var_3m)} | {fv(r.var_12m)} | {r.fonte} |")
         w("\n*Números são o ponto de partida. A leitura (por que se moveram, o que o mercado espera de juros, "
           "crescimento e risco) vem da pesquisa de notícias e expectativas no Passo 2.*\n")
     else:
@@ -459,7 +460,22 @@ def main() -> int:
                       and not any(s in r.get("classe", "").lower() for s in mem.SEM_COTACAO)]
         C.dados["carteira_memoria"] = {"data_registro": data_mem, "ativos": da_memoria}
     simbolos = sorted(set([tk, bench_sym] + list(pesos) + da_memoria + pares))
-    px = C.etapa("Preços históricos (Yahoo)", fx.precos, simbolos, args.anos_precos)
+    px = C.etapa("Preços históricos (várias fontes)", fx.precos, simbolos, args.anos_precos)
+    C.dados["fonte_precos"] = dict(fx.ORIGEM_PRECOS)
+    conf = C.etapa("Conferência cruzada do preço", pv.conferir_ultimo_preco, tk)
+    C.dados["conferencia_preco"] = conf
+    w("## 7c. Fontes de preço e conferência cruzada [DADO OBSERVADO]\n")
+    for sym, fonte in fx.ORIGEM_PRECOS.items():
+        aviso = "" if fonte in pv.AJUSTADAS or fonte.startswith("FALHOU") else " (sem ajuste por proventos)"
+        w(f"- {sym}: {fonte}{aviso}")
+        if fonte.startswith("FALHOU"):
+            C.lacunas.append(f"Preços de {sym}: {fonte}")
+    if conf:
+        if conf.get("conferido") is False and "fonte_2" in conf:
+            C.lacunas.append(f"Preço de {tk} diverge entre {conf['fonte_1']} e {conf['fonte_2']}: {conf['obs']}")
+        w(f"- Conferência de {tk}: " + ", ".join(f"{k} {fmt(v, 'roe') if k == 'diferenca' else v}"
+                                                 for k, v in conf.items() if k != "ticker"))
+    w("")
     px_base = None
     if px is not None:
         px_base, avisos_cambio = converter_moeda(px, moeda_base, args.anos_precos)

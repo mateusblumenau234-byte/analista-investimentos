@@ -273,32 +273,19 @@ def bcb_focus(indicador: str = "IPCA", n: int = 40) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------- Preços (qualquer bolsa)
-def precos(simbolos: list[str], anos: int = 5) -> pd.DataFrame:
-    """Preços ajustados de qualquer bolsa via Yahoo; para tickers da B3 que falharem, usa a B3 oficial.
+ORIGEM_PRECOS: dict[str, str] = {}   # símbolo -> fonte usada na última chamada de precos()
 
-    Um símbolo que falha não derruba os outros: fica fora da tabela e é registrado na proveniência.
-    Na B3 não há o índice Ibovespa: '^BVSP' é aproximado pelo ETF BOVA11 no fallback.
+
+def precos(simbolos: list[str], anos: int = 5) -> pd.DataFrame:
+    """Preços diários de qualquer bolsa, com várias fontes em cadeia (ver provedores.py).
+
+    Um símbolo que falha em todas as fontes fica fora da tabela; a fonte de cada um fica em ORIGEM_PRECOS.
     """
-    import mercados as mk
-    df, falhas = _precos_yahoo(simbolos, anos)
-    faltam_b3 = [s for s in falhas if mk.eh_b3(s) or s.upper() == "^BVSP"]
-    if faltam_b3:
-        try:
-            import b3
-            mapa = {s: ("BOVA11" if s.upper() == "^BVSP" else s.upper().replace(".SA", "")) for s in faltam_b3}
-            dfb = b3.precos_ajustados(sorted(set(mapa.values())), anos)
-            extra = pd.DataFrame({s.upper(): dfb[t] for s, t in mapa.items() if t in dfb})
-            PROV.add("B3 — preços (fallback)", b3.COTAHIST_URL.format(ano="<ANO>"),
-                     f"Yahoo indisponível para {faltam_b3}; ^BVSP aproximado por BOVA11")
-            saltos = {k: v for k, v in b3.checar_saltos(extra).items() if v}
-            if saltos:
-                PROV.add("B3 — ALERTA", "", f"Saltos >35% possivelmente não ajustados: {saltos}")
-            df = extra if df is None else df.join(extra, how="outer")
-        except Exception as e:  # noqa: BLE001
-            PROV.add("B3 — fallback falhou", "", str(e)[:120])
-    if df is None or df.empty:
-        raise FonteIndisponivel(f"Sem preços para nenhum de {simbolos}")
-    return df.sort_index()
+    import provedores as pv
+    df, origem = pv.precos(simbolos, anos)
+    ORIGEM_PRECOS.clear()
+    ORIGEM_PRECOS.update(origem)
+    return df
 
 
 def _precos_yahoo(simbolos: list[str], anos: int = 5) -> tuple[pd.DataFrame | None, list[str]]:
@@ -328,15 +315,14 @@ def _precos_yahoo(simbolos: list[str], anos: int = 5) -> tuple[pd.DataFrame | No
 
 
 def cotacao_atual(ticker: str) -> dict:
-    """Cotação: Yahoo (qualquer bolsa, ~15 min de atraso); para a B3, se falhar, último fechamento oficial."""
-    import mercados as mk
+    """Cotação: Yahoo (~15 min de atraso); se falhar, último fechamento da próxima fonte da cadeia."""
+    import provedores as pv
     try:
         return _cotacao_yahoo(ticker)
     except Exception:  # noqa: BLE001
-        if mk.eh_b3(ticker):
-            import b3
-            return b3.ultimo_fechamento(ticker)
-        raise FonteIndisponivel(f"Cotação indisponível para {ticker}")
+        d, nome, _ = pv.serie(ticker, 1, pular={"yahoo"})
+        return {"preco": float(d.iloc[-1]), "moeda": None, "horario": f"fechamento de {d.index[-1].date()}",
+                "atraso_aviso": f"Yahoo indisponível; último fechamento via {nome}. Confirme na bolsa de origem."}
 
 
 def _cotacao_yahoo(ticker: str) -> dict:
@@ -359,9 +345,21 @@ def painel_global(anos: int = 1) -> pd.DataFrame:
     é em pontos percentuais, não em %.
     """
     import mercados as mk
+    import provedores as pv
     df, falhas = _precos_yahoo(list(mk.PAINEL_GLOBAL), max(anos, 1))
-    if df is None:
-        raise FonteIndisponivel("Painel global indisponível")
+    df = df if df is not None else pd.DataFrame()
+    fonte = {c: "Yahoo" for c in df.columns}
+    for sym in list(falhas):                       # reserva: FRED (sem chave) para o que o Yahoo não entregou
+        if sym in pv.FRED_PAINEL:
+            try:
+                sid, obs = pv.FRED_PAINEL[sym]
+                df = df.join(pv.fred(sid, max(anos, 1) + 1).rename(sym.upper()), how="outer")
+                fonte[sym.upper()] = f"FRED {sid}" + (f" ({obs})" if obs else "")
+                falhas.remove(sym)
+            except Exception:  # noqa: BLE001
+                pass
+    if df.empty:
+        raise FonteIndisponivel("Painel global indisponível (Yahoo e FRED)")
     linhas = []
     for sym, (grupo, nome) in mk.PAINEL_GLOBAL.items():
         s = df.get(sym.upper())
@@ -377,7 +375,7 @@ def painel_global(anos: int = 1) -> pd.DataFrame:
             return (b - a) if juros else (b / a - 1)
         linhas.append({"simbolo": sym, "grupo": grupo, "nome": nome, "ultimo": float(s.iloc[-1]),
                        "data": str(s.index[-1].date()), "var_1m": var(21), "var_3m": var(63), "var_12m": var(250),
-                       "unidade_var": "p.p." if juros else "%"})
+                       "unidade_var": "p.p." if juros else "%", "fonte": fonte.get(sym.upper(), "Yahoo")})
     if falhas:
         PROV.add("Yahoo — painel global (falhas)", "", ", ".join(falhas))
     return pd.DataFrame(linhas)

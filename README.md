@@ -41,6 +41,25 @@ Ou em dois passos:
 Na primeira análise o Claude instala as bibliotecas Python da skill (`requirements.txt`: numpy, pandas,
 requests, markdown, matplotlib).
 
+### Fontes de dados extras (opcionais, gratuitas)
+Sem nenhuma chave o analista já usa Yahoo, Stooq, FRED, CVM, B3 e Banco Central. Com chaves gratuitas,
+ganha mais fontes de reserva e de conferência:
+```bash
+export ALPHAVANTAGE_API_KEY="sua-chave"   # alphavantage.co (ações do mundo, B3 inclusive)
+export BRAPI_TOKEN="seu-token"            # brapi.dev (B3)
+```
+No Windows (PowerShell), para ficar salvo: `setx ALPHAVANTAGE_API_KEY "sua-chave"` e abra um terminal novo.
+
+### Composio (opcional)
+Com o plugin do [Composio](https://docs.composio.dev/docs/claude-code-plugin), o analista também pode usar o
+toolkit Alpha Vantage (cotações, balanços, notícias com sentimento, opções, commodities, dados econômicos)
+direto pelo Claude Code:
+```
+/plugin marketplace add ComposioHQ/composio-plugin-cc
+/plugin install composio@composio
+```
+O Composio é um serviço de terceiros: ao conectar um aplicativo, você dá acesso a ele. Conecte só o que for usar.
+
 Para analisar ações dos EUA, a SEC pede identificação. Defina uma vez:
 ```bash
 export SEC_USER_AGENT="Seu Nome seu@email.com"

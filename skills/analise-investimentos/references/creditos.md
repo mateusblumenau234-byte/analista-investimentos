@@ -19,5 +19,8 @@ e a decisão de não incorporar código de terceiros.
 
 Avaliados e não usados: Folo (leitor de RSS com licença AGPL e sem API para agentes), aibrief.fyi (site sem
 RSS ou API pública), alirezarezvani/claude-skills `finance` (foco em finanças internas de empresa, como
-orçamento e previsão; o código não pôde ser revisado), Composio (exige instalar um programa externo com
-`curl | sh` e entrar com a conta da pessoa, o que foge do escopo de uma skill pública).
+orçamento e previsão; o código não pôde ser revisado).
+
+Integração opcional: [Composio](https://docs.composio.dev/docs/claude-code-plugin) (plugin oficial deles para
+Claude Code). A skill não instala o Composio; só usa as ferramentas dele quando o investidor já o instalou e
+conectou, por exemplo o toolkit Alpha Vantage.

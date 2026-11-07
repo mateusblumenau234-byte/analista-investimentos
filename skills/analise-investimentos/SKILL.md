@@ -22,6 +22,17 @@ Descubra o caminho absoluto dela antes do primeiro comando e use-o em todos. Os 
 `relatorios/` na pasta de trabalho atual; a memória do investidor fica em `~/.analise-investimentos/dados/`
 (ou na pasta da variável `ANALISE_DADOS`).
 
+## Análise completa é o padrão: nenhuma etapa é pulada
+Todas as etapas abaixo são obrigatórias em toda análise: memória e perguntas, coleta, exploração dos dados,
+radar de notícias, pesquisa (inclusive o **release oficial** no RI), valuation, **conselho de 3 analistas**,
+relatório e gravação da memória. **Custo, tempo ou "o pedido não pediu" não são motivos para pular.**
+Só existe modo rápido quando o investidor pedir com essas palavras ("análise rápida", "resumo rápido");
+mesmo assim, diga no início o que ficou de fora. Se uma etapa falhar por erro técnico, tente a fonte
+alternativa; se ainda assim falhar, registre a falha e siga com as outras.
+
+O relatório termina com o **checklist de entrega** (Passo 4), marcando cada etapa como feita ou não feita
+e o motivo. Entregar sem ele é entregar incompleto.
+
 ## Fluxo de trabalho
 
 ### Passo 0 — Memória do investidor e perguntas (OBRIGATÓRIO, antes de qualquer coleta)
@@ -60,6 +71,10 @@ a carteira de ninguém vai para repositório algum. Nunca assuma perfil ou carte
 6. Respeite as regras do perfil (ativos congelados ou excluídos, alocação alvo, dinheiro separado para
    metas de vida) e diga no relatório quando a análise contrariar alguma delas.
 7. Concorrentes: proponha pares realmente comparáveis e explique por quê.
+8. **Carteira completa antes de falar de concentração.** Se a carteira gravada tiver só o ativo analisado
+   (ou estiver vazia) e o perfil estiver incompleto, pergunte o resto da carteira e a alocação alvo antes de
+   concluir qualquer coisa sobre concentração ou peso. Se o investidor não quiser informar, diga no
+   relatório que a análise de carteira ficou limitada, em vez de afirmar que o ativo é 100% da carteira.
 
 O horizonte e o objetivo (`--horizonte`, `--objetivo`) vêm do perfil. A carteira do Markowitz vem de
 `dados/carteira.csv` automaticamente (pesos por valor de mercado); `--carteira` só serve para simular
@@ -73,6 +88,23 @@ Depois peça a carteira atual (ativo, classe, cotas e preço médio) ou confirme
 zero. Se ela não souber responder algo, grave "não definido" e siga; nunca invente.
 Grave em `dados/perfil.md` (substituindo cada `[PREENCHER]` e a data em "Atualizado em") e a carteira com
 `memoria.py atualizar`.
+
+### Fontes de dados: várias, em cadeia, sempre conferidas
+Nenhum número depende de uma fonte só.
+- **Preços**: `scripts/provedores.py` tenta, em ordem, Yahoo, Stooq, Alpha Vantage (`ALPHAVANTAGE_API_KEY`),
+  brapi para a B3 (`BRAPI_TOKEN`) e a B3 oficial (COTAHIST). A fonte de cada série aparece na seção 7c, com
+  aviso quando ela não ajusta proventos. O preço do ativo é **conferido em duas fontes**; divergência acima
+  de 2% vira lacuna a explicar.
+- **Painel mundial**: Yahoo, com o FRED (Federal Reserve de St. Louis, sem chave) como reserva para juros,
+  dólar, câmbio, VIX, petróleo e índices americanos.
+- **Demonstrações**: CVM (B3) e SEC (EUA), conferidas contra o release do RI e um agregador.
+- **Composio (opcional)**: se ferramentas do Composio estiverem disponíveis na sessão (por exemplo, o
+  toolkit **Alpha Vantage**), use-as para conferir e completar: cotação e série histórica, visão geral e
+  demonstrações da empresa, calendário de resultados, dividendos, **notícias com sentimento**, opções com
+  volatilidade implícita, commodities e indicadores econômicos dos EUA. Registre a fonte como
+  "Alpha Vantage via Composio". Use só ferramentas de leitura; nunca envie e-mail, mensagem ou publique
+  algo por elas sem o investidor pedir.
+- Sem fonte nenhuma para um dado: diga exatamente o que falta. Nunca preencha de memória.
 
 ### Passo 1 — Coleta quantitativa em tempo real
 ```bash
@@ -181,7 +213,7 @@ calcular se faltar alguma premissa ou se g ≥ WACC. Isso é intencional. Mostre
 Para estresse adicional (queda de receita, compressão de margem, alta de juros, câmbio),
 use `valuation.dcf_fcff(p, sobrescrever={...})` em um script curto no diretório da análise.
 
-### Passo 3b — Conselho de 3 analistas independentes
+### Passo 3b — Conselho de 3 analistas independentes (OBRIGATÓRIO)
 Lance **três subagentes em paralelo** (ferramenta Agent, `run_in_background: true`), um para cada papel
 definido em `references/personas.md`: `valor`, `macro` e `risco`. Cada prompt deve:
 - apontar `personas.md` e `metodologia.md` e a pasta da análise (base quantitativa, `dados.json`, CSVs e premissas);
@@ -212,6 +244,21 @@ Escreva `relatorios/<TICKER>_<data>/RELATORIO.md` com as **20 seções na ordem 
 - Exponha os pontos negativos com o mesmo destaque dos positivos.
 - Termine com: lacunas, fontes consultadas (tabela de proveniência + URLs da pesquisa web) e referências acadêmicas verificadas.
 - Aviso final: o relatório é material educacional e de pesquisa, e não constitui recomendação individual de investimento (CVM Resolução 20/2021).
+
+Termine o `RELATORIO.md` e a resposta ao investidor com o **checklist de entrega**:
+
+| Etapa | Feita? | Observação |
+|---|---|---|
+| Memória lida e perguntas feitas (carteira completa) | | |
+| Coleta quantitativa (fontes de preço e conferência cruzada) | | |
+| Exploração dos dados (alertas tratados) | | |
+| Radar de notícias e rumores classificados | | |
+| Release oficial e documentos do regulador lidos | | |
+| Contexto mundial e expectativas | | |
+| Valuation com sensibilidade | | |
+| Conselho de 3 analistas e nota | | |
+| Relatório HTML publicado | | |
+| Memória gravada | | |
 
 Inclua no `RELATORIO.md` uma seção "Nota e conselho", com a nota final, as dimensões, as notas dos três
 analistas, os pontos em que concordam e os pontos em que divergem.
@@ -262,6 +309,7 @@ Esta skill roda comandos no computador de quem usa. Por isso:
 ## Arquivos
 - `scripts/memoria.py`: memória do investidor (resumo e perguntas, pesos reais da carteira, atualizar, compra, registrar).
 - `modelos/`: perfil, carteira e histórico em branco, copiados para `~/.analise-investimentos/dados/` no primeiro uso.
+- `scripts/provedores.py`: várias fontes de preço em cadeia (Yahoo, Stooq, Alpha Vantage, brapi, B3), conferência cruzada e FRED.
 - `scripts/mercados.py`: bolsa, país, moeda, índice e símbolo de cada ticker; lista do painel mundial.
 - `scripts/sec.py`: demonstrações anuais de empresas dos EUA (SEC XBRL) e indicadores.
 - `scripts/noticias.py`: radar de notícias (empresa, setor, mundo e Brasil), rumores por credibilidade.

@@ -122,3 +122,57 @@ def test_radar_de_noticias_e_rumores(tmp_path):
     assert "expectativa" in por_link["http://a/6"]["tipos"]
     md = (tmp_path / "noticias.md").read_text()
     assert "CHANCE QUASE NULA" in md and "rumor mexe no preço mesmo sendo falso" in md
+
+
+# ---------------------------------------------------------------- várias fontes
+import provedores as pv  # noqa: E402
+import fontes as fx  # noqa: E402
+
+
+@pytest.mark.parametrize("t,stooq,av", [
+    ("AAPL", "aapl.us", "AAPL"), ("BRK-B", "brk.b.us", "BRK.B"), ("PETR4", None, "PETR4.SAO"),
+    ("HSBA.L", "hsba.uk", "HSBA.LON"), ("7203.T", "7203.jp", None), ("0700.HK", "700.hk", None),
+    ("^GSPC", "^spx", None), ("USDBRL=X", None, None),
+])
+def test_simbolos_das_fontes(t, stooq, av):
+    assert pv.simbolo_stooq(t) == stooq
+    assert pv.simbolo_alphavantage(t) == av
+
+
+def test_cadeia_passa_para_a_proxima_fonte(monkeypatch):
+    idx = pd.bdate_range("2025-01-01", periods=10)
+    def falha(s, a):
+        raise fx.FonteIndisponivel("fora do ar")
+    monkeypatch.setitem(pv.PROVEDORES, "yahoo", falha)
+    monkeypatch.setitem(pv.PROVEDORES, "stooq", lambda s, a: pd.Series(range(1, 11), index=idx, dtype=float))
+    monkeypatch.delenv("ANALISE_FONTES_PRECO", raising=False)
+    df, origem = pv.precos(["AAPL", "MSFT"], 1)
+    assert origem == {"AAPL": "stooq", "MSFT": "stooq"} and df["AAPL"].iloc[-1] == 10
+    monkeypatch.setenv("ANALISE_FONTES_PRECO", "yahoo")      # só Yahoo: tudo falha
+    with pytest.raises(fx.FonteIndisponivel):
+        pv.precos(["AAPL"], 1)
+
+
+def test_conferencia_cruzada_aponta_divergencia(monkeypatch):
+    idx = pd.bdate_range("2025-01-01", periods=5)
+    monkeypatch.delenv("ANALISE_FONTES_PRECO", raising=False)
+    monkeypatch.setitem(pv.PROVEDORES, "yahoo", lambda s, a: pd.Series([10.0] * 5, index=idx))
+    monkeypatch.setitem(pv.PROVEDORES, "stooq", lambda s, a: pd.Series([10.1] * 5, index=idx))
+    ok = pv.conferir_ultimo_preco("AAPL")
+    assert ok["conferido"] and ok["fonte_2"] == "stooq"
+    monkeypatch.setitem(pv.PROVEDORES, "stooq", lambda s, a: pd.Series([12.0] * 5, index=idx))
+    ruim = pv.conferir_ultimo_preco("AAPL")
+    assert not ruim["conferido"] and "DIVERGÊNCIA" in ruim["obs"]
+
+
+def test_fred_e_reserva_do_painel(monkeypatch):
+    csv = "observation_date,DGS10\n2025-01-02,4.50\n2025-01-03,.\n2025-01-06,4.60\n"
+    class R:
+        text = csv
+    monkeypatch.setattr(fx, "_get", lambda *a, **k: R())
+    s = pv.fred("DGS10")
+    assert list(s.values) == [4.5, 4.6]                     # "." (sem dado) é descartado
+    monkeypatch.setattr(fx, "_precos_yahoo", lambda simbolos, anos: (None, list(simbolos)))
+    pg = fx.painel_global()
+    linha = pg[pg["simbolo"] == "^TNX"].iloc[0]
+    assert linha["ultimo"] == 4.6 and linha["fonte"].startswith("FRED")

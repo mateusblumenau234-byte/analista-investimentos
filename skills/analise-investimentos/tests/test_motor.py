@@ -210,6 +210,8 @@ def test_cli_ponta_a_ponta_offline(tmp_path, monkeypatch, retornos):
                                                          "erp_total": 0.0747, "erp_maduro": 0.0423, "atualizado": "January 5, 2026"})
     monkeypatch.setattr(fx, "damodaran_beta_setor", lambda *a: None)
     monkeypatch.setattr(fx, "painel_global", lambda *a: pd.DataFrame())
+    import provedores as pv
+    monkeypatch.setattr(pv, "conferir_ultimo_preco", lambda *a, **k: {"ticker": "TESTE3", "conferido": True})
     prem = tmp_path / "p.json"
     prem.write_text(json.dumps({**PREMISSAS, "acoes": None,
                                 "cenarios": {"pessimista": {"margem_ebit": 0.15}, "base": {}, "otimista": {"margem_ebit": 0.25}}}))
