@@ -1,0 +1,12 @@
+{
+  "name": "analista-investimentos",
+  "description": "Analista de investimentos para Claude Code",
+  "owner": { "name": "mateusblumenau234-byte" },
+  "plugins": [
+    {
+      "name": "analise-investimentos",
+      "source": "./",
+      "description": "Analisa ações de qualquer bolsa com memória do investidor, contexto mundial, rumores classificados e valuation."
+    }
+  ]
+}

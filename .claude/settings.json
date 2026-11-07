@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Bash(python skills/analise-investimentos/scripts/:*)",
+      "Bash(pip install -q -r skills/analise-investimentos/requirements.txt)",
+      "Bash(python -m pytest skills/analise-investimentos/tests:*)"
+    ]
+  }
+}

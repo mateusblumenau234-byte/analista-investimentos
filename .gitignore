@@ -1,0 +1,10 @@
+# Relatórios gerados (contêm a carteira de quem rodou)
+relatorios/*
+!relatorios/premissas/
+# Memória, se alguém apontar ANALISE_DADOS para dentro do projeto
+dados/
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/

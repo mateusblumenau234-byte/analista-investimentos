@@ -1,0 +1,10 @@
+{
+  "name": "analise-investimentos",
+  "version": "1.0.0",
+  "description": "Analista de investimentos pessoal para ações de qualquer bolsa: memória do investidor, dados em tempo real (CVM, SEC, bancos centrais, painel mundial), notícias e rumores classificados por credibilidade, valuation e Markowitz na carteira real.",
+  "author": { "name": "mateusblumenau234-byte" },
+  "homepage": "https://github.com/mateusblumenau234-byte/analista-investimentos",
+  "repository": "https://github.com/mateusblumenau234-byte/analista-investimentos",
+  "license": "MIT",
+  "keywords": ["investimentos", "ações", "valuation", "b3", "sec", "markowitz", "notícias", "finanças"]
+}
