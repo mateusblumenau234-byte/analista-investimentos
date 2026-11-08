@@ -5,10 +5,10 @@ argument-hint: "TICKER [motivo: comprar | manter | vender | aportar]"
 Analise $ARGUMENTS seguindo a skill `analise-investimentos`, **em no máximo 5 minutos** (orçamento por etapa na
 seção "Tempo" da skill), com as ferramentas do servidor MCP `analista`. Chamadas independentes sempre juntas:
 
-0. **Antes de tudo**, `abrir_analise` e abra o endereço devolvido no **navegador embutido do app do Claude**
-   (ferramenta de navegador do app, abrindo uma aba com a URL), para o investidor ver o homebroker e a análise
-   ao vivo ao lado da conversa. Sem navegador embutido: `start "" "<endereço>"`. Não espere a página carregar.
-   Durante a análise, a cada achado importante, chame `anotar` com 1 ou 2 frases (é o que o investidor lê ao vivo).
+0. **Antes de tudo**, `abrir_analise`. Se ela devolver `abrir_app_claude`, abra esse link com a ferramenta
+   Artifact (`action: "open"`): é o app Analista, com homebroker, análise ao vivo e conversa, dentro do Claude.
+   Senão, abra `homebroker_local` no navegador embutido do app do Claude. Não espere carregar.
+   Durante a análise, a cada achado importante, chame `anotar` com 1 ou 2 frases (aparece ao vivo no app).
 1. `carteira` e `resumo_do_ativo`: leia o perfil, a posição e o histórico; pergunte só o que faltar.
 2. Na mesma mensagem: `analisar_ativo`, `noticias` (com `ticker` e `brasil=True` para ativos da B3) e `painel_mundial`.
 3. Se ferramentas do Composio estiverem conectadas (MCP em connect.composio.dev), busque também as notícias

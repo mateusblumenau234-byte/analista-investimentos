@@ -39,6 +39,11 @@ mcp = FastMCP("analista", instructions=(
     "posições, compras, alertas e análises só quando o investidor pedir ou confirmar. Não é recomendação."))
 
 
+# Ferramentas que só leem: o app do Claude (homebroker) chama sem pedir confirmação a cada consulta
+LEITURA = {"carteira", "resumo_do_ativo", "cotacao", "painel_mundial", "serie_bcb", "focus", "noticias",
+           "alertas", "historico", "mundo", "analise_ao_vivo", "cotacoes_rapidas"}
+
+
 def ferramenta(fn):
     """Registra a ferramenta e desvia prints para stderr (stdout é o canal do protocolo MCP)."""
     @functools.wraps(fn)
@@ -50,7 +55,9 @@ def ferramenta(fn):
                 return f"Erro: {e}"
             except Exception as e:  # noqa: BLE001
                 return f"Erro: {type(e).__name__}: {e}"
-    return mcp.tool()(envolta)
+    from mcp.types import ToolAnnotations
+    nota = ToolAnnotations(readOnlyHint=fn.__name__ in LEITURA)
+    return mcp.tool(annotations=nota)(envolta)
 
 
 def _rodar_script(nome: str, args: list[str], timeout: int = 900) -> str:
@@ -275,9 +282,16 @@ def painel() -> str:
 
 @ferramenta
 def abrir_analise(ticker: str) -> str:
-    """PRIMEIRO passo de toda análise: prepara a pasta e devolve o endereço do homebroker com o painel da
-    análise ao vivo. Abra esse endereço no navegador embutido do app do Claude, ao lado da conversa."""
-    return web.abrir_analise(ticker)
+    """PRIMEIRO passo de toda análise: prepara a pasta e diz o que abrir para o investidor acompanhar ao vivo.
+    Se houver o app Analista publicado no Claude (endereço claude.ai/artifact/...), abra-o com a ferramenta
+    Artifact (action "open"); ele tem homebroker, análise ao vivo e conversa. Senão, abra o endereço local no
+    navegador embutido do app do Claude."""
+    local = web.abrir_analise(ticker)
+    try:
+        app = json.loads((mem.DADOS.parent / "app.json").read_text(encoding="utf-8")).get("url")
+    except (OSError, ValueError):
+        app = None
+    return json.dumps({"abrir_app_claude": app, "homebroker_local": local}, ensure_ascii=False)
 
 
 @ferramenta
@@ -286,6 +300,34 @@ def anotar(ticker: str, texto: str) -> str:
     o raciocínio enquanto a análise acontece. Use a cada achado importante."""
     web.anotar(ticker, texto)
     return "ok"
+
+
+@ferramenta
+def historico(ticker: str, faixa: str = "6m") -> str:
+    """Série de preços para gráfico. faixa: 1d, 5d, 1m, 6m, 1a, 5a. Devolve JSON {t, f, pts: [[epoch_s, preço]]}."""
+    return json.dumps(web.historico(ticker.upper(), faixa if faixa in web.FAIXAS else "6m"), separators=(",", ":"))
+
+
+@ferramenta
+def cotacoes_rapidas(tickers: list[str]) -> str:
+    """Cotação rápida de vários ativos com variação do dia e nome (até 40). Devolve JSON
+    [{t, p, v, m, n, f?, d?}]: p preço, v variação em fração, m moeda, n nome, f/d fonte e data quando é reserva."""
+    return json.dumps(web.cotacoes([x.strip().upper() for x in tickers if x.strip()][:40]), ensure_ascii=False,
+                      separators=(",", ":"), default=str)
+
+
+@ferramenta
+def mundo() -> str:
+    """Cotações rápidas do mundo (Ibovespa, S&P, Nasdaq, dólar, juros dos EUA, VIX, petróleo, ouro, bitcoin).
+    Devolve JSON [{t, nome, p, v}] com v = variação do dia em fração."""
+    return json.dumps(web.mundo(), ensure_ascii=False, separators=(",", ":"), default=str)
+
+
+@ferramenta
+def analise_ao_vivo(ticker: str) -> str:
+    """Estado da análise mais recente do ativo: etapas, números, pareceres dos 3 analistas, comentários,
+    nota final e endereço do relatório. JSON, ou null se nunca foi analisado."""
+    return json.dumps(web.analise(ticker), ensure_ascii=False, separators=(",", ":"), default=str)
 
 
 @ferramenta

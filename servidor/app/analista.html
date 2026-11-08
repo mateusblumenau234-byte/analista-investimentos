@@ -1,0 +1,388 @@
+<title>Analista · Homebroker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: app de duas colunas dentro do Claude — mercado à esquerda, conversa com o analista à direita;
+   em tela estreita vira abas (Mercado / Análise / Conversa). Azul-marinho, fonte do sistema encorpada. */
+:root{
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --bg:#060a12;--card:#0e1522;--card2:#141d2d;--card3:#1c2739;--line:rgba(140,180,255,.09);
+  --tx:#eef4ff;--tx2:#9cabc2;--tx3:#64748c;
+  --blue:#2f7bff;--blue2:#1a3fb8;--sky:#4ea1ff;--cyan:#38c6ff;
+  --up:#3ddc97;--dn:#ff6b7a;--warn:#ffb547;--on-blue:#ffffff;
+  --r-xl:22px;--r-lg:18px;--r-md:14px;--r-sm:10px;color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#edf2fa;--card:#ffffff;--card2:#f2f6fd;--card3:#e4ecf8;--line:rgba(20,60,140,.09);
+  --tx:#0b1626;--tx2:#4e5f78;--tx3:#8593a8;--up:#0f9f6a;--dn:#e0384c;--warn:#b86e00;color-scheme:light}}
+:root[data-theme="light"]{--bg:#edf2fa;--card:#ffffff;--card2:#f2f6fd;--card3:#e4ecf8;--line:rgba(20,60,140,.09);
+  --tx:#0b1626;--tx2:#4e5f78;--tx3:#8593a8;--up:#0f9f6a;--dn:#e0384c;--warn:#b86e00;color-scheme:light}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tx);font:15px/1.45 var(--font);letter-spacing:-.011em;-webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;overflow:hidden}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 40% at 30% -10%,rgba(47,107,255,.22),transparent 70%)}
+button,input,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+small{font-size:.6em;font-weight:500;letter-spacing:0}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--tx2)}
+:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+
+.app{height:100%;display:grid;grid-template-rows:auto auto 1fr;padding-left:max(12px,env(safe-area-inset-left,0px));
+  padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:10px 12px;gap:10px}
+.top{display:flex;align-items:center;gap:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;white-space:nowrap}
+.brand i{width:26px;height:26px;border-radius:9px;background:linear-gradient(135deg,#7cc4ff,var(--blue) 55%,var(--blue2))}
+.tape{flex:1;min-width:0;display:flex;gap:22px;overflow:hidden;white-space:nowrap;font-size:13px;
+  -webkit-mask-image:linear-gradient(90deg,#000 90%,transparent);mask-image:linear-gradient(90deg,#000 90%,transparent)}
+.tape b{font-weight:500;color:var(--tx3);margin-right:6px}
+.pill{padding:6px 12px;border-radius:999px;background:var(--card2);font-size:12.5px;font-weight:600;white-space:nowrap}
+.pill.on{background:rgba(61,220,151,.14);color:var(--up)}
+.aviso{display:none;padding:10px 14px;border-radius:var(--r-md);background:rgba(255,181,71,.12);color:var(--warn);font-size:13.5px}
+.aviso.on{display:block}
+
+.tabs{display:none;gap:2px;padding:4px;border-radius:999px;background:var(--card2);justify-self:start}
+.tabs button{border:0;background:none;padding:7px 16px;border-radius:999px;color:var(--tx2);font-weight:600;font-size:13px;cursor:pointer}
+.tabs button.on{background:var(--blue);color:var(--on-blue)}
+
+.main{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:12px}
+.col{min-height:0;overflow:auto;display:grid;gap:12px;align-content:start;scrollbar-width:thin}
+.card{background:var(--card);border-radius:var(--r-xl);padding:16px 18px;min-width:0}
+h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3)}
+
+/* lista de ativos em fichas horizontais */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chip{flex:none;display:grid;grid-template-columns:auto auto;column-gap:10px;align-items:baseline;padding:9px 12px;border-radius:var(--r-md);
+  background:var(--card2);border:1px solid transparent;cursor:pointer;text-align:left;transition:transform .12s,background .2s}
+.chip:active{transform:scale(.97)}.chip:hover{background:var(--card3)}
+.chip b{font-size:14px}.chip span{font-size:13px;text-align:right}.chip em{grid-column:1/-1;font-style:normal;font-size:11.5px;font-weight:600}
+.chip.sel{background:linear-gradient(135deg,var(--sky),var(--blue) 55%,var(--blue2));color:#fff;box-shadow:0 10px 26px rgba(47,107,255,.32)}
+.chip.sel em{color:#fff}.chip.add{color:var(--tx2);align-items:center;display:flex}
+.busca{display:flex;gap:8px}
+.busca input{flex:1;min-width:0;background:var(--card2);border:1px solid transparent;border-radius:999px;padding:9px 14px;outline:none}
+.busca input:focus{border-color:var(--sky)}
+
+/* cartão do ativo */
+.hero{border-radius:var(--r-lg);padding:18px 20px;color:#fff;display:grid;gap:4px;justify-items:start;
+  background:radial-gradient(120% 140% at 0% 0%,#5aa9ff 0%,var(--blue) 45%,var(--blue2) 100%)}
+.hero.neg{background:radial-gradient(120% 140% at 0% 0%,#4a78c9 0%,#2a3f7a 50%,#1a2448 100%)}
+.hero .tk{font-size:14px;font-weight:700;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
+.hero .nm{font-size:13.5px;opacity:.85}
+.hero .px{font-size:48px;font-weight:600;letter-spacing:-.05em;line-height:1.02;margin:8px 0 4px}
+.hero .px small{opacity:.75}
+.hero .vr{font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.92);color:#0b1a3a}
+.ctl{display:flex;align-items:center;gap:10px;margin:14px 0 4px;flex-wrap:wrap}
+.seg{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--card2)}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:999px;color:var(--tx2);font-weight:600;font-size:12.5px;cursor:pointer}
+.seg button.on{background:var(--blue);color:var(--on-blue)}
+.fonte{margin-left:auto;color:var(--tx3);font-size:12px}
+.chart{position:relative;height:240px}
+.chart svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tip{position:absolute;display:none;pointer-events:none;padding:5px 10px;border-radius:999px;background:var(--blue);color:#fff;font-size:12px;font-weight:600;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px}
+.stats div{background:var(--card2);border-radius:var(--r-md);padding:10px 12px}
+.stats dt{font-size:12px;color:var(--tx3)}.stats dd{margin:2px 0 0;font-size:16px;font-weight:600}
+
+/* análise ao vivo */
+.live-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.estado{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:rgba(56,198,255,.14);color:var(--cyan)}
+.estado.fim{background:rgba(61,220,151,.14);color:var(--up)}
+.passos{list-style:none;display:flex;gap:5px;margin:0 0 12px;padding:0}
+.passos li{flex:1;min-width:0;font-size:11.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.passos li::before{content:"";display:block;height:5px;border-radius:3px;background:var(--card3);margin-bottom:6px}
+.passos li.ok{color:var(--tx2)}.passos li.ok::before{background:var(--sky)}
+.passos li.agora{color:var(--tx)}.passos li.agora::before{background:linear-gradient(90deg,var(--blue),var(--cyan));animation:pulsa 1.4s ease-in-out infinite}
+@keyframes pulsa{50%{opacity:.45}}
+.nota{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.nota b{font-size:44px;font-weight:600;letter-spacing:-.05em;line-height:1}.nota small{font-size:15px;color:var(--tx3)}
+.nota span{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--blue);color:#fff}
+.agentes{display:grid;gap:6px}
+.ag{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 12px;border-radius:var(--r-md);background:var(--card2)}
+.ag b{font-size:13.5px}.ag p{margin:0;color:var(--tx2);font-size:12.5px}.ag strong{grid-row:span 2;align-self:center;font-size:20px}
+.vazio{color:var(--tx3);font-size:13.5px}
+
+/* conversa */
+.chat{display:grid;grid-template-rows:auto 1fr auto;min-height:0;padding:0;overflow:hidden}
+.chat header{padding:14px 18px 10px;border-bottom:1px solid var(--line)}
+.chat header h2{margin:0}.chat header p{margin:4px 0 0;font-size:13px;color:var(--tx2)}
+.msgs{overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.msg{max-width:92%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.eu{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:5px}
+.msg.ia{align-self:flex-start;background:var(--card2);border-bottom-left-radius:5px}
+.msg.ia.pensando{color:var(--tx3)}
+.msg .uso{display:block;margin-top:6px;font-size:11.5px;color:var(--tx3)}
+.sug{display:flex;gap:6px;flex-wrap:wrap}
+.sug button{border:1px solid var(--line);background:var(--card2);border-radius:999px;padding:6px 11px;font-size:12.5px;color:var(--tx2);cursor:pointer}
+.sug button:hover{color:var(--tx);border-color:var(--sky)}
+.enviar{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
+.enviar textarea{resize:none;height:44px;max-height:120px;background:var(--card2);border:1px solid transparent;border-radius:var(--r-md);padding:11px 13px;outline:none}
+.enviar textarea:focus{border-color:var(--sky)}
+.btn{border:0;border-radius:999px;padding:0 18px;background:var(--blue);color:var(--on-blue);font-weight:600;cursor:pointer;transition:transform .12s}
+.btn:active{transform:scale(.97)}.btn[disabled]{opacity:.5;cursor:default}
+.btn.parar{background:var(--card3);color:var(--tx)}
+
+@media (max-width:860px){
+  .tabs{display:inline-flex}.main{grid-template-columns:minmax(0,1fr)}
+  .main>[data-pane]{display:none}.main>[data-pane].on{display:grid}
+  .tape{display:none}.hero .px{font-size:40px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><i></i>Analista</div>
+    <div class="tape" id="tape" aria-label="Mercados agora"></div>
+    <span class="pill" id="b3">B3</span>
+  </header>
+  <div>
+    <div class="aviso" id="aviso"></div>
+    <nav class="tabs" id="tabs" aria-label="Seções">
+      <button data-tab="mercado" class="on">Mercado</button><button data-tab="analise">Análise</button><button data-tab="conversa">Conversa</button>
+    </nav>
+  </div>
+
+  <main class="main">
+    <section class="col on" data-pane="mercado" id="col-mercado">
+      <div class="card">
+        <form class="busca" id="busca" autocomplete="off"><input id="novo" placeholder="Abrir ativo: PETR4, AAPL, ASML.AS" aria-label="Abrir ativo"></form>
+        <div class="chips" id="chips" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <div class="hero" id="hero"><span class="tk" id="tk">—</span><span class="nm" id="nm"></span>
+          <div class="px" id="px">—</div><span class="vr" id="vr" hidden></span></div>
+        <div class="ctl"><div class="seg" id="faixas">
+          <button data-f="1d">1D</button><button data-f="5d">5D</button><button data-f="1m">1M</button><button data-f="6m" class="on">6M</button><button data-f="1a">1A</button><button data-f="5a">5A</button></div>
+          <span class="fonte" id="fonte"></span></div>
+        <div class="chart" id="chart"><svg id="svg"></svg><div class="tip" id="tip"></div></div>
+        <dl class="stats" id="stats"></dl>
+      </div>
+      <div class="card" data-mobile-hide="analise" id="card-analise"></div>
+    </section>
+
+    <section class="col" data-pane="analise" id="col-analise"></section>
+
+    <section class="card chat" data-pane="conversa" id="col-conversa">
+      <header><h2>Pergunte ao analista</h2><p>Eu consulto sua carteira, cotações, notícias e a análise ao vivo antes de responder.</p></header>
+      <div class="msgs" id="msgs" aria-live="polite">
+        <div class="msg ia">Olá! Pergunte o que quiser sobre o mercado ou a sua carteira. Também posso abrir um ativo aqui ao lado.</div>
+        <div class="sug" id="sug">
+          <button>Como está minha carteira hoje?</button><button>Resuma a análise deste ativo</button>
+          <button>Quais notícias mexeram com este ativo?</button><button>O que mudou no mundo esta semana?</button>
+        </div>
+      </div>
+      <form class="enviar" id="enviar"><textarea id="pergunta" placeholder="Escreva sua pergunta…" aria-label="Sua pergunta"></textarea>
+        <button class="btn" id="btn-enviar">Enviar</button></form>
+    </section>
+  </main>
+</div>
+
+<script>
+"use strict";
+const SRV = "host:plugin_analise-investimentos_analista";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const fmt = (v, c = 2) => v == null || isNaN(v) ? "—" : Number(v).toLocaleString("pt-BR", {minimumFractionDigits: c, maximumFractionDigits: c});
+const pct = v => v == null ? "—" : (v >= 0 ? "+" : "") + fmt(v * 100, 2) + "%";
+const cls = v => v == null ? "mu" : v >= 0 ? "up" : "dn";
+const ler = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const gravar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+const S = {mcp: null, sel: ler("sel", null), faixa: "6m", obs: ler("obs", ["^BVSP"]), cart: [], q: {}, hist: null, analise: null, perfil: null};
+
+/* ---------- acesso às ferramentas do analista (servidor no seu computador) ---------- */
+function carga(res) {             // nossas ferramentas devolvem {result: "<texto ou JSON>"}
+  let p = res?.payload; if (p && typeof p === "object" && "result" in p) p = p.result;
+  if (typeof p === "string") { try { return JSON.parse(p); } catch { return p; } }
+  return p;
+}
+async function chamar(tool, input = {}, opts) { return carga(await S.mcp.callTool(SRV, tool, input, opts)); }
+function avisar(code) {
+  const txt = {
+    server_not_connected: "Este app precisa do Claude para Desktop com o plugin analise-investimentos ligado. Abra-o pelo app do Claude no seu computador.",
+    not_in_manifest: "O acesso às ferramentas do analista foi recusado para este app. Libere em Permissões, no menu do app.",
+    approval_required: "O Claude pediu sua aprovação para consultar o analista. Aprove para carregar os dados.",
+  }[code] || "Não consegui falar com o analista agora. Tente de novo em instantes.";
+  $("#aviso").textContent = txt; $("#aviso").classList.add("on");
+}
+
+/* ---------- topo ---------- */
+function relogio() {
+  const sp = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"})), m = sp.getHours() * 60 + sp.getMinutes();
+  const aberta = sp.getDay() > 0 && sp.getDay() < 6 && m >= 600 && m < 1075;
+  $("#b3").textContent = aberta ? "B3 aberta" : "B3 fechada"; $("#b3").classList.toggle("on", aberta);
+}
+const TAPE = {"^BVSP": "Ibovespa", "^GSPC": "S&P 500", "^IXIC": "Nasdaq", "USDBRL=X": "Dólar", "^TNX": "Treasury 10a", "^VIX": "VIX", "BZ=F": "Brent", "GC=F": "Ouro", "BTC-USD": "Bitcoin"};
+function tape(lista) {
+  $("#tape").innerHTML = (lista || []).filter(x => TAPE[x.t] && x.p != null)
+    .map(x => `<span><b>${TAPE[x.t]}</b>${fmt(x.p, x.p > 1000 ? 0 : 2)} <span class="${cls(x.v)}">${pct(x.v)}</span></span>`).join("");
+}
+
+/* ---------- ativos ---------- */
+function chips() {
+  const ts = [...new Set([...S.cart.map(p => p.ativo), ...S.obs])];
+  $("#chips").innerHTML = ts.map(t => { const q = S.q[t] || {};
+    return `<button class="chip ${t === S.sel ? "sel" : ""}" data-t="${esc(t)}"><b>${esc(t)}</b><span>${fmt(q.p)}</span><em class="${cls(q.v)}">${pct(q.v)}</em></button>`; }).join("");
+}
+async function cotar() {
+  const ts = [...new Set([...S.cart.map(p => p.ativo), ...S.obs, S.sel].filter(Boolean))];
+  if (!ts.length) return;
+  try { for (const q of await chamar("cotacoes_rapidas", {tickers: ts})) S.q[q.t] = q; } catch (e) { if (e.code) avisar(e.code); }
+  chips(); cabecalho();
+}
+function cabecalho() {
+  const q = S.q[S.sel] || {}, pos = S.cart.find(p => p.ativo === S.sel);
+  $("#tk").textContent = S.sel || "—"; $("#nm").textContent = q.n && q.n !== S.sel ? q.n : "";
+  const [i, d] = q.p == null ? ["—", ""] : fmt(q.p).split(",");
+  $("#px").innerHTML = `${q.m ? `<small>${esc(q.m)}</small> ` : ""}${i}${d ? `<small>,${d}</small>` : ""}`;
+  $("#vr").hidden = q.v == null; $("#vr").textContent = `${pct(q.v)} ${q.f ? "no último pregão" : "hoje"}`;
+  $("#hero").className = "hero" + (q.v != null && q.v < 0 ? " neg" : "");
+  $("#fonte").textContent = q.f ? `fechamento de ${q.d} · ${String(q.f).toUpperCase()}` : q.h ? "Yahoo, atraso de ~15 min" : "";
+  const st = [], pts = S.hist?.t === S.sel ? S.hist.pts : [];
+  if (pts.length > 1) { const r = pts.at(-1)[1] / pts[0][1] - 1; st.push(["Variação no período", `<span class="${cls(r)}">${pct(r)}</span>`]); }
+  if (pos?.cotas) { const pm = Number(pos.preco_medio), c = Number(pos.cotas), r = q.p && pm ? q.p / pm - 1 : null;
+    st.push(["Sua posição", `${fmt(c, 0)} × PM ${fmt(pm)}`], ["Resultado", `<span class="${cls(r)}">${pct(r)}</span>`], ["Valor", fmt(c * (q.p ?? pm))]); }
+  $("#stats").innerHTML = st.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join("");
+}
+async function grafico() {
+  if (!S.sel) return; const alvo = S.sel + S.faixa;
+  try { const h = await chamar("historico", {ticker: S.sel, faixa: S.faixa}); if (alvo === S.sel + S.faixa) S.hist = h; }
+  catch { S.hist = {t: S.sel, pts: []}; }
+  desenhar(); cabecalho();
+}
+function desenhar() {
+  const svg = $("#svg"), W = $("#chart").clientWidth, H = $("#chart").clientHeight, pts = S.hist?.pts || [];
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  if (pts.length < 2) { svg.innerHTML = `<text x="8" y="22" fill="var(--tx3)" font-size="13">Sem histórico para este período.</text>`; return; }
+  const ys = pts.map(p => p[1]), lo = Math.min(...ys), hi = Math.max(...ys), pad = (hi - lo) * .08 || 1, R = W - 50, B = H - 20;
+  const x = i => i * R / (pts.length - 1), y = v => B - (v - lo + pad) * (B - 6) / (hi - lo + 2 * pad);
+  const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+  const dt = ts => new Date(ts * 1000).toLocaleDateString("pt-BR", S.faixa === "1d" ? {hour: "2-digit", minute: "2-digit"} : {day: "2-digit", month: "short"});
+  const grade = [0, .5, 1].map(f => { const v = lo - pad + f * (hi - lo + 2 * pad);
+    return `<line x1="0" x2="${R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${R + 6}" y="${y(v) + 4}" fill="var(--tx3)" font-size="11">${fmt(v)}</text>`; }).join("");
+  svg.innerHTML = `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sky)" stop-opacity=".35"/><stop offset="1" stop-color="var(--sky)" stop-opacity="0"/></linearGradient></defs>
+    ${grade}<text x="0" y="${H - 3}" fill="var(--tx3)" font-size="11">${dt(pts[0][0])}</text><text x="${R}" y="${H - 3}" fill="var(--tx3)" font-size="11" text-anchor="end">${dt(pts.at(-1)[0])}</text>
+    <path d="${d}L${R},${B}L0,${B}Z" fill="url(#g)"/><path d="${d}" fill="none" stroke="var(--sky)" stroke-width="2" stroke-linejoin="round"/>
+    <circle id="cp" r="4.5" fill="var(--sky)" stroke="var(--tx)" stroke-width="2" visibility="hidden"/>`;
+  svg.onpointermove = e => { const r = svg.getBoundingClientRect(), i = Math.max(0, Math.min(pts.length - 1, Math.round((e.clientX - r.left) / R * (pts.length - 1))));
+    const c = svg.querySelector("#cp"), t = $("#tip"); c.setAttribute("cx", x(i)); c.setAttribute("cy", y(pts[i][1])); c.setAttribute("visibility", "visible");
+    t.style.display = "block"; t.textContent = `${dt(pts[i][0])} · ${fmt(pts[i][1])}`;
+    t.style.left = Math.min(x(i) + 10, R - t.offsetWidth) + "px"; t.style.top = Math.max(y(pts[i][1]) - 34, 0) + "px"; };
+  svg.onpointerleave = () => { $("#tip").style.display = "none"; svg.querySelector("#cp")?.setAttribute("visibility", "hidden"); };
+}
+
+/* ---------- análise ao vivo ---------- */
+const PASSOS = [["coleta", "Coleta"], ["noticias", "Notícias"], ["exploracao", "Exploração"], ["conselho", "Conselho"], ["nota", "Nota"], ["relatorio", "Relatório"]];
+const NOMES = {valor: "Agente de valor", macro: "Agente macro", risco: "Agente de risco"};
+let unwatchAnalise = null;
+function vigiarAnalise() {
+  unwatchAnalise?.(); if (!S.mcp || !S.sel) return;
+  unwatchAnalise = S.mcp.watchTool(SRV, "analise_ao_vivo", {ticker: S.sel}, ev => {
+    if (ev.type === "data") { S.analise = carga(ev.result); renderAnalise(); }
+  }, {refetchInterval: 30000});
+}
+function renderAnalise() {
+  const a = S.analise, alvo = [$("#card-analise"), $("#col-analise")];
+  if (!a || typeof a !== "object") {
+    const h = `<h2>Análise</h2><p class="vazio">${esc(S.sel || "Este ativo")} ainda não foi analisado. Peça na conversa: “analise ${esc(S.sel || "BBAS3")}”.</p>`;
+    alvo.forEach(el => el.innerHTML = el.id === "col-analise" ? `<div class="card">${h}</div>` : h); return;
+  }
+  const e = a.etapas, feito = k => k === "conselho" ? e.conselho >= 3 : e[k], atual = PASSOS.find(([k]) => !feito(k))?.[0];
+  const n = a.nota, m = a.metricas || {};
+  const h = `<div class="live-head"><h2 style="margin:0">Análise de ${esc(S.sel)} · ${esc(String(a.pasta || "").slice(-10))}</h2>
+      <span class="estado ${e.relatorio ? "fim" : ""}">${e.relatorio ? "Concluída" : "Em andamento"}</span></div>
+    <ol class="passos">${PASSOS.map(([k, t]) => `<li class="${feito(k) ? "ok" : k === atual ? "agora" : ""}">${t}</li>`).join("")}</ol>
+    ${n ? `<div class="nota"><b>${fmt(n.nota_final, 1)}</b><small>/ 10</small><span>${esc(n.leitura || "")}</span></div>` : ""}
+    <dl class="stats" style="margin:0 0 10px">${[["P/L", fmt(m.p_l, 1)], ["P/VP", fmt(m.p_vp, 2)], ["Dividend yield", m.dy == null ? "—" : fmt(m.dy * 100, 1) + "%"], ["Volatilidade", m.vol == null ? "—" : fmt(m.vol * 100, 1) + "%"]]
+      .filter(([, v]) => v !== "—").map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+    <div class="agentes">${["valor", "macro", "risco"].map(k => { const c = (a.conselho || {})[k];
+      return `<div class="ag"><b>${NOMES[k]}</b><strong>${c ? fmt(c.nota, 1) : "…"}</strong><p>${c ? esc(c.veredito || "") : "analisando"}</p></div>`; }).join("")}</div>
+    ${(a.notas || []).length ? `<h2 style="margin:14px 0 8px">Comentários</h2><div class="agentes">${a.notas.slice(-4).reverse().map(x => `<div class="ag"><p style="grid-column:1/-1;color:var(--tx)">${esc(x.txt)}</p></div>`).join("")}</div>` : ""}`;
+  alvo.forEach(el => el.innerHTML = el.id === "col-analise" ? `<div class="card">${h}</div>` : h);
+}
+
+function selecionar(t) {
+  if (!t) return; S.sel = String(t).toUpperCase(); gravar("sel", S.sel); S.hist = null;
+  chips(); cabecalho(); grafico(); cotar(); vigiarAnalise();
+}
+
+/* ---------- conversa com o analista (Claude, com as ferramentas do seu analista) ---------- */
+const REGRAS = `Você é o analista de investimentos pessoal do usuário, dentro do app "Analista" (um homebroker). Responda em português do Brasil, direto e em linguagem simples, em poucos parágrafos curtos.
+Regras: use as ferramentas antes de responder sobre números; nunca invente dados; diga a fonte e a data quando citar números; separe fato, rumor e opinião; não dê recomendação categórica de compra ou venda (diga que não é recomendação quando falar em decisão). Quando a pergunta for sobre um ativo, chame abrir_ativo para mostrar o gráfico dele na tela.
+Para "analisar" um ativo: use analise_ao_vivo (se já houver análise de hoje, resuma-a); se não houver, use analisar_ativo e noticias e explique o resultado; diga que a análise completa com os 3 agentes também pode ser pedida no chat do Claude Code com "analise TICKER".`;
+const historicoChat = [];
+let ctl = null;
+function ferramentas() {
+  const viaMcp = (name, description, props = {}, req = []) => ({name, description,
+    inputSchema: {type: "object", properties: props, required: req},
+    async execute(input, ctx) { mostrarUso(name); const r = await chamar(name, input, {signal: ctx.signal}); return typeof r === "string" ? r.slice(0, 12000) : JSON.stringify(r).slice(0, 12000); }});
+  const T = {type: "string", description: "Ticker no padrão Yahoo: PETR4, AAPL, ASML.AS, ^BVSP"};
+  return [
+    viaMcp("carteira", "Perfil do investidor, posições, alertas e últimas análises."),
+    viaMcp("cotacoes_rapidas", "Preço, variação do dia e nome de vários ativos.", {tickers: {type: "array", items: {type: "string"}}}, ["tickers"]),
+    viaMcp("historico", "Série de preços. faixa: 1d, 5d, 1m, 6m, 1a, 5a.", {ticker: T, faixa: {type: "string"}}, ["ticker"]),
+    viaMcp("noticias", "Notícias e rumores classificados da empresa (e do Brasil com brasil=true).", {empresa: {type: "string"}, ticker: T, brasil: {type: "boolean"}, dias: {type: "number"}}, ["empresa"]),
+    viaMcp("analise_ao_vivo", "Estado e resultado da análise mais recente do ativo (nota, agentes, comentários).", {ticker: T}, ["ticker"]),
+    viaMcp("analisar_ativo", "Coleta completa do ativo (balanços CVM/SEC, múltiplos, risco, carteira). Leva ~1 min.", {ticker: T}, ["ticker"]),
+    viaMcp("mundo", "Cotações do mundo agora: bolsas, dólar, juros dos EUA, VIX, petróleo, ouro, bitcoin."),
+    viaMcp("focus", "Expectativas do Boletim Focus. indicador: IPCA, Selic, PIB Total ou Câmbio.", {indicador: {type: "string"}}),
+    {name: "abrir_ativo", description: "Mostra o ativo no homebroker (gráfico, preço, análise) ao lado da conversa.",
+      inputSchema: {type: "object", properties: {ticker: T}, required: ["ticker"]},
+      execute(input) { selecionar(String(input.ticker)); return "aberto"; }},
+  ];
+}
+let bolhaAtual = null;
+function mostrarUso(nome) { if (!bolhaAtual) return; const u = bolhaAtual.querySelector(".uso") || bolhaAtual.appendChild(Object.assign(document.createElement("span"), {className: "uso"}));
+  u.textContent = "consultando: " + nome.replace(/_/g, " "); }
+function bolha(cls, txt) { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = txt; $("#msgs").appendChild(d); d.scrollIntoView({block: "end"}); return d; }
+async function perguntar(texto) {
+  texto = texto.trim(); if (!texto) return;
+  const sample = await claude.use("sample");
+  if (!sample) { bolha("ia", "A conversa não está disponível nesta visualização. Abra o app pelo Claude."); return; }
+  $("#sug").hidden = true; bolha("eu", texto);
+  const ctx = `Contexto da tela: ativo aberto ${S.sel || "nenhum"}; carteira registrada: ${S.cart.map(p => `${p.ativo} ${p.cotas}×${p.preco_medio}`).join(", ") || "vazia"}.`;
+  historicoChat.push({role: "user", content: `${ctx}\n\n${texto}`});
+  const b = bolhaAtual = bolha("ia pensando", "Pensando…");
+  ctl = new AbortController(); $("#btn-enviar").textContent = "Parar"; $("#btn-enviar").classList.add("parar");
+  try {
+    const {text, truncated} = await sample([{role: "user", content: REGRAS}, ...historicoChat.slice(-12)], {
+      tools: ferramentas(), signal: ctl.signal,
+      onText: ({text}) => { b.classList.remove("pensando"); b.firstChild ? (b.firstChild.nodeValue = text) : (b.textContent = text); b.scrollIntoView({block: "end"}); }});
+    b.querySelector(".uso")?.remove(); b.classList.remove("pensando"); b.textContent = text + (truncated ? "\n\n(resposta cortada; peça por partes)" : "");
+    historicoChat.push({role: "assistant", content: text});
+  } catch (e) {
+    historicoChat.pop(); b.classList.remove("pensando");
+    const c = {cancelled: "Parei.", not_granted: "Você não liberou o uso do Claude por este app. Libere em Permissões para conversar.",
+      rate_limited: "Muitas perguntas seguidas. Espere um pouco e tente de novo.", tools_unavailable: "Esta visualização não deixa o Claude usar as ferramentas do analista.",
+      session_expired: "Sua sessão expirou. Entre de novo no Claude."}[e.code] || "Não consegui responder agora. Tente de novo.";
+    b.textContent = (e.text ? e.text + "\n\n" : "") + c;
+  } finally { bolhaAtual = null; ctl = null; $("#btn-enviar").textContent = "Enviar"; $("#btn-enviar").classList.remove("parar"); }
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener("click", e => {
+  const c = e.target.closest("[data-t]"); if (c) return selecionar(c.dataset.t);
+  const f = e.target.closest("[data-f]"); if (f) { document.querySelectorAll("#faixas button").forEach(b => b.classList.toggle("on", b === f)); S.faixa = f.dataset.f; return grafico(); }
+  const tb = e.target.closest("[data-tab]");
+  if (tb) { document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b === tb));
+    document.querySelectorAll("[data-pane]").forEach(p => p.classList.toggle("on", p.dataset.pane === tb.dataset.tab)); return; }
+  const s = e.target.closest("#sug button"); if (s) { if (matchMedia("(max-width:860px)").matches) $('[data-tab="conversa"]').click(); return perguntar(s.textContent); }
+});
+$("#busca").addEventListener("submit", e => { e.preventDefault(); const t = $("#novo").value.trim().toUpperCase(); if (!t) return;
+  if (!S.obs.includes(t) && !S.cart.some(p => p.ativo === t)) { S.obs.push(t); gravar("obs", S.obs); } $("#novo").value = ""; selecionar(t); });
+$("#enviar").addEventListener("submit", e => { e.preventDefault(); if (ctl) return ctl.abort(); const t = $("#pergunta").value; $("#pergunta").value = ""; perguntar(t); });
+$("#pergunta").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#enviar").requestSubmit(); } });
+addEventListener("resize", desenhar);
+
+/* ---------- início ---------- */
+relogio(); setInterval(relogio, 30000); renderAnalise(); cabecalho();
+(async () => {
+  S.mcp = await claude.use("mcp");
+  if (!S.mcp) { avisar("server_not_connected"); return; }
+  S.mcp.watchTool(SRV, "mundo", null, ev => { if (ev.type === "data") tape(carga(ev.result)); else if (ev.error?.code === "server_not_connected") avisar(ev.error.code); }, {refetchInterval: 120000});
+  try {
+    const c = await chamar("carteira");
+    S.cart = (c?.posicoes || []).filter(p => p.ativo);
+    if (!S.sel) S.sel = S.cart[0]?.ativo || S.obs[0];
+  } catch (e) { avisar(e.code); }
+  selecionar(S.sel || "^BVSP");
+  setInterval(cotar, 60000);
+})();
+</script>
