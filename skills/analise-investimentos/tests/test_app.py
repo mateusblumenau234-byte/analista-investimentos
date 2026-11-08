@@ -118,3 +118,25 @@ def test_homebroker_api(dados, monkeypatch):
     assert b"Homebroker" in urllib.request.urlopen(url + "/").read()
     with pytest.raises(urllib.error.HTTPError):
         urllib.request.urlopen(url + "/../servidor/analista.py")
+
+
+def test_analise_ao_vivo(dados, tmp_path, monkeypatch):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "servidor"))
+    import urllib.request
+    import web
+    monkeypatch.setattr(web, "RELATORIOS", tmp_path / "relatorios")
+    url = web.abrir_analise("bbas3")
+    assert url.endswith("/?t=BBAS3&analise=1")
+    p = web.pasta_analise("BBAS3")
+    a = web.analise("BBAS3")
+    assert a["inicio"] and a["etapas"]["conselho"] == 0 and not a["etapas"]["relatorio"]
+    web.anotar("BBAS3", "P/VP de 0,53.")
+    (p / "dados.json").write_text(json.dumps({"multiplos": {"preco": 17.1, "p_vp": 0.53}}), encoding="utf-8")
+    (p / "parecer_risco.json").write_text(json.dumps({"nota": 3.5, "veredito": "cautela"}), encoding="utf-8")
+    (p / "relatorio.html").write_text("<h1>ok</h1>", encoding="utf-8")
+    a = web.analise("BBAS3")
+    assert a["notas"][0]["txt"] == "P/VP de 0,53." and a["metricas"]["p_vp"] == 0.53
+    assert a["conselho"]["risco"]["nota"] == 3.5 and a["etapas"]["relatorio"] and a["fim"]
+    base = url.split("/?")[0]
+    assert urllib.request.urlopen(base + a["relatorio"]).read() == b"<h1>ok</h1>"
+    assert web.analise("XPTO3") is None

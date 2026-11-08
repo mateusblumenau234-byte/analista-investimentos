@@ -28,7 +28,10 @@ from mcp.server.fastmcp import FastMCP  # noqa: E402
 import estado as st  # noqa: E402
 import memoria as mem  # noqa: E402
 
-RELATORIOS = Path(os.environ.get("ANALISE_RELATORIOS", mem.DADOS.parent / "relatorios"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import web  # noqa: E402
+
+RELATORIOS = web.RELATORIOS
 mcp = FastMCP("analista", instructions=(
     "Ferramentas do analista de investimentos. Antes de analisar um ativo, leia `carteira` (perfil, posições, "
     "alertas). Use dados destas ferramentas e cite a fonte; nunca invente números. Siga a skill "
@@ -161,7 +164,7 @@ def noticias(empresa: str, ticker: str | None = None, setor: str | None = None, 
     classificados por credibilidade. extras_composio: JSON de notícias trazidas pelo Composio (por exemplo a
     resposta do ALPHA_VANTAGE_NEWS_SENTIMENT), que entram na mesma classificação."""
     import noticias as nt
-    pasta = Path(tempfile.mkdtemp(prefix="radar_"))
+    pasta = web.pasta_analise(ticker, criar=True) if ticker else Path(tempfile.mkdtemp(prefix="radar_"))
     args = ["--empresa", empresa, "--dias", str(dias), "--saida", str(pasta)]
     if ticker:
         args += ["--ticker", ticker]
@@ -266,11 +269,24 @@ def painel() -> str:
 
 
 @ferramenta
+def abrir_analise(ticker: str) -> str:
+    """PRIMEIRO passo de toda análise: prepara a pasta e devolve o endereço do homebroker com o painel da
+    análise ao vivo. Abra esse endereço no navegador embutido do app do Claude, ao lado da conversa."""
+    return web.abrir_analise(ticker)
+
+
+@ferramenta
+def anotar(ticker: str, texto: str) -> str:
+    """Escreve um comentário curto (1 a 2 frases) no painel da análise ao vivo, para o investidor acompanhar
+    o raciocínio enquanto a análise acontece. Use a cada achado importante."""
+    web.anotar(ticker, texto)
+    return "ok"
+
+
+@ferramenta
 def homebroker() -> str:
     """Abre o homebroker local (cotações ao vivo, gráfico, carteira, notícias e mundo) e devolve o endereço
     para o investidor abrir no navegador. Só escuta em 127.0.0.1 e só lê dados."""
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import web
     return web.iniciar()
 
 

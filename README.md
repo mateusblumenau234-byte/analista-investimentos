@@ -40,6 +40,12 @@ Claude ferramentas próprias, em qualquer conversa, sem depender de scripts solt
 | `painel` | painel visual em HTML: patrimônio no tempo, alocação, posições, alertas e análises |
 | `homebroker` | homebroker local no navegador (http://127.0.0.1:8765): cotações, gráfico de 1 dia a 5 anos, carteira, notícias e rumores, mundo |
 
+**Análise ao vivo dentro do Claude**: ao pedir "analisa PETR4" (ou `/analisar PETR4`), o homebroker abre no
+navegador embutido do app do Claude, ao lado da conversa, com um painel que se atualiza sozinho: etapas,
+cronômetro dos 5 minutos, números principais, os pareceres dos três analistas conforme ficam prontos,
+comentários do Claude enquanto ele trabalha, nota final e o relatório completo. Você conversa com o Claude e
+vê tudo acontecendo ao mesmo tempo.
+
 Comandos: `/analisar TICKER`, `/homebroker`, `/carteira`, `/monitor`, `/painel` e `/alerta`. A análise tem orçamento
 de **até 5 minutos**: coleta, notícias e os três analistas rodam em paralelo; a análise profunda só sob pedido.
 

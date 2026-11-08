@@ -24,7 +24,9 @@ Descubra o caminho absoluto dela antes do primeiro comando e use-o em todos. Os 
 
 ## Ferramentas do app (servidor MCP `analista`)
 Quando as ferramentas do servidor `analista` estiverem na sessão (plugin instalado), prefira-as aos comandos
-de script equivalentes: `carteira` e `resumo_do_ativo` (Passo 0), `analisar_ativo` (coleta e exploração),
+de script equivalentes. **Toda análise começa com `abrir_analise`**: abra o endereço no navegador embutido do app
+do Claude (ou `start` no Windows) para o investidor acompanhar ao vivo no homebroker, e use `anotar` a cada
+achado importante. Depois: `carteira` e `resumo_do_ativo` (Passo 0), `analisar_ativo` (coleta e exploração),
 `noticias` (radar, com `extras_composio`), `valuation_dcf`, `nota_final`, `relatorio_html`,
 `registrar_analise`. Para o conselho, use os agentes `analista-valor`, `analista-macro` e `analista-risco`
 em paralelo. Ao fim de toda análise, ofereça alertas (`criar_alerta`) ligados aos gatilhos do conselho.

@@ -8,7 +8,8 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&
 const ler = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const gravar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
-const S = {sel: ler("sel", null), faixa: "6m", obs: ler("obs", ["^BVSP", "AAPL"]), cart: [], q: {}, hist: null};
+const URLP = new URLSearchParams(location.search);
+const S = {sel: URLP.get("t")?.toUpperCase() || ler("sel", null), faixa: "6m", obs: ler("obs", ["^BVSP", "AAPL"]), cart: [], q: {}, hist: null};
 
 // ---------------- topo
 const TAPE = {"^BVSP": "Ibovespa", "^GSPC": "S&P 500", "^IXIC": "Nasdaq", "USDBRL=X": "Dólar", "BZ=F": "Brent",
@@ -125,7 +126,7 @@ async function noticias() {
 function selecionar(t) {
   if (!t) return;
   S.sel = t.toUpperCase(); gravar("sel", S.sel); S.hist = null;
-  listas(); cabecalho(); grafico(); noticias(); cotar();
+  listas(); cabecalho(); grafico(); noticias(); cotar(); live();
 }
 
 // ---------------- carteira
@@ -166,6 +167,44 @@ $("#busca").addEventListener("submit", e => {
   $("#novo").value = ""; selecionar(t);
 });
 addEventListener("resize", desenhar);
+
+// ---------------- análise ao vivo (lê os arquivos que cada etapa grava; o Claude escreve os comentários)
+const PASSOS = [["coleta", "Coleta de dados"], ["noticias", "Notícias e rumores"], ["exploracao", "Exploração"],
+  ["conselho", "Conselho (3 analistas)"], ["nota", "Nota final"], ["relatorio", "Relatório"]];
+const NOMES = {valor: "Fundamentalista de valor", macro: "Estrategista macro", risco: "Gestor de risco"};
+let liveT = null;
+async function live() {
+  const t = S.sel; if (!t) return;
+  let a; try { a = await api("/api/analise?t=" + encodeURIComponent(t)); } catch { return; }
+  const hoje = a?.pasta?.endsWith(new Date().toLocaleDateString("sv-SE"));
+  if (!a || (!hoje && !URLP.has("analise"))) { $("#live").hidden = true; return; }
+  $("#live").hidden = false;
+  const e = a.etapas, feito = k => k === "conselho" ? e.conselho >= 3 : e[k];
+  const atual = PASSOS.find(([k]) => !feito(k))?.[0];
+  $("#live-st").textContent = e.relatorio ? "Análise concluída" : "Análise em andamento";
+  $("#live-tit").textContent = `${t}${a.metricas.empresa ? " · " + a.metricas.empresa : ""}`;
+  $("#passos").innerHTML = PASSOS.map(([k, n]) => `<li class="${feito(k) ? "ok" : k === atual ? "agora" : ""}">${n}${k === "conselho" && e.conselho && e.conselho < 3 ? ` ${e.conselho}/3` : ""}</li>`).join("");
+  if (a.inicio) {
+    const fim = a.fim || Date.now(), seg = Math.max(0, (fim - new Date(a.inicio)) / 1000);
+    $("#live-tempo").textContent = `${Math.floor(seg / 60)}:${String(Math.floor(seg % 60)).padStart(2, "0")}`;
+    $(".timer").classList.toggle("over", seg > 300);
+  }
+  const m = a.metricas;
+  $("#live-num").innerHTML = [["Preço", fmt(m.preco)], ["P/L", fmt(m.p_l, 1)], ["P/VP", fmt(m.p_vp, 2)],
+    ["Dividend yield", m.dy == null ? "—" : pct(m.dy).replace("+", "")], ["Volatilidade a.a.", m.vol == null ? "—" : pct(m.vol).replace("+", "")],
+    ["Retorno a.a.", pct(m.ret)], ["Nº de Graham", fmt(m.graham)], ["Teto Bazin 6%", fmt(m.bazin)]]
+    .filter(([, v]) => v !== "—").map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("") || `<p class="mu">Aguardando a coleta…</p>`;
+  $("#live-cons").innerHTML = ["valor", "macro", "risco"].map(k => { const c = a.conselho[k];
+    return c ? `<div class="an"><b>${NOMES[k]}</b><span class="nt">${fmt(c.nota, 1)}</span><p>${esc(c.veredito || "")}${c.conviccao ? ` · convicção ${esc(c.conviccao)}` : ""}</p></div>`
+      : `<div class="an vazio">${NOMES[k]}: analisando…</div>`; }).join("");
+  $("#live-notas").innerHTML = a.notas.slice().reverse().map(n => `<li><time>${esc(n.h)}</time>${esc(n.txt)}</li>`).join("") || `<li class="mu">Os comentários aparecem aqui enquanto a análise acontece.</li>`;
+  const n = a.nota;
+  $("#live-final").innerHTML = n ? `<h4>Nota final</h4><div class="big">${fmt(n.nota_final, 1)}<small> / 10</small></div>
+    <div class="lei">${esc(n.leitura || "")}</div><div class="mu">quantitativa ${fmt(n.nota_quant, 1)} · conselho ${fmt(n.nota_conselho, 1)} · consenso ${esc(n.consenso)}</div>
+    ${(n.travas || []).map(x => `<div class="dn">${esc(x)}</div>`).join("")}${a.relatorio ? `<a class="btn" href="${a.relatorio}" target="_blank">Abrir relatório completo</a>` : ""}`
+    : `<h4>Nota final</h4><p class="mu">Sai depois do conselho.</p>${a.lacunas.length ? `<h4>Lacunas</h4><ul>${a.lacunas.map(x => `<li class="mu">${esc(x)}</li>`).join("")}</ul>` : ""}`;
+  clearTimeout(liveT); liveT = setTimeout(live, e.relatorio ? 30e3 : 3e3);
+}
 
 relogio(); setInterval(relogio, 30e3);
 carteira().catch(() => selecionar(S.sel || S.obs[0]));

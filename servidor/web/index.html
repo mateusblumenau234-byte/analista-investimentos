@@ -13,6 +13,25 @@
   <div class="clock"><span id="b3" class="mk"></span><span id="hora"></span></div>
 </header>
 
+<section class="live" id="live" hidden aria-live="polite">
+  <div class="live-top">
+    <div><span class="eyebrow" id="live-st">Análise em andamento</span><h2 id="live-tit">—</h2></div>
+    <div class="timer"><b id="live-tempo">0:00</b><span>de 5:00</span></div>
+  </div>
+  <ol class="passos" id="passos"></ol>
+  <div class="live-grid">
+    <div class="live-col">
+      <h4>Números principais</h4><dl class="kv" id="live-num"></dl>
+      <h4>Conselho de analistas</h4><div class="conselho" id="live-cons"></div>
+    </div>
+    <div class="live-col">
+      <h4>Comentários do analista <small class="mu">ao vivo</small></h4>
+      <ul class="notas" id="live-notas"></ul>
+    </div>
+    <div class="live-col final" id="live-final"></div>
+  </div>
+</section>
+
 <main class="grid">
   <aside class="watch" aria-label="Lista de ativos">
     <form id="busca" autocomplete="off">

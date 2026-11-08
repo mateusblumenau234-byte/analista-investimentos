@@ -26,6 +26,7 @@ import memoria as mem  # noqa: E402
 import mercados as mk  # noqa: E402
 
 WEB = Path(__file__).resolve().parent / "web"
+RELATORIOS = Path(__import__("os").environ.get("ANALISE_RELATORIOS", mem.DADOS.parent / "relatorios"))
 FAIXAS = {"1d": ("1d", "5m"), "5d": ("5d", "30m"), "1m": ("1mo", "1d"), "6m": ("6mo", "1d"),
           "1a": ("1y", "1d"), "5a": ("5y", "1wk")}
 MUNDO = ["^BVSP", "^GSPC", "^IXIC", "^STOXX50E", "^N225", "^HSI", "USDBRL=X", "EURUSD=X", "DX-Y.NYB",
@@ -136,6 +137,67 @@ def noticias(t: str, empresa: str | None) -> list[dict]:
     return cache(f"n:{t}", 900, busca)
 
 
+def pasta_analise(t: str, criar: bool = False) -> Path:
+    """Pasta da análise de hoje (a mesma que analisar.py usa)."""
+    import datetime as dt
+    p = RELATORIOS / f"{t.upper()}_{dt.date.today():%Y-%m-%d}"
+    if criar:
+        p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _json(p: Path):
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def analise(t: str) -> dict | None:
+    """Estado da análise mais recente do ativo, lido dos arquivos que cada etapa grava (sem custo extra)."""
+    pastas = sorted(RELATORIOS.glob(f"{t.upper()}_*"), key=lambda x: x.name)
+    if not pastas:
+        return None
+    p = pastas[-1]
+    d = _json(p / "dados.json") or {}
+    m, est, ic = d.get("multiplos") or {}, d.get("estatisticas_ativo") or {}, d.get("indicadores_complementares") or {}
+    pareceres = {x.stem.split("_", 1)[1]: _json(x) for x in p.glob("parecer_*.json")}
+    notas = []
+    if (p / "notas.jsonl").exists():
+        notas = [json.loads(ln) for ln in (p / "notas.jsonl").read_text(encoding="utf-8").splitlines() if ln.strip()]
+    rel = p / "relatorio.html"
+    return {
+        "pasta": p.name, "inicio": (_json(p / "inicio.json") or {}).get("inicio"),
+        "etapas": {"coleta": (p / "relatorio_quantitativo.md").exists(), "exploracao": (p / "exploracao.md").exists(),
+                   "noticias": (p / "noticias.md").exists(), "conselho": len(pareceres),
+                   "nota": (p / "nota.json").exists(), "relatorio": rel.exists()},
+        "metricas": {"preco": m.get("preco"), "p_l": m.get("p_l_ltm"), "p_vp": m.get("p_vp"),
+                     "dy": m.get("dividend_yield_caixa"), "valor_mercado": m.get("valor_mercado"),
+                     "vol": est.get("volatilidade_anualizada"), "ret": est.get("retorno_anualizado"),
+                     "graham": ic.get("numero_graham"), "bazin": ic.get("preco_teto_bazin_6pct"),
+                     "empresa": (d.get("empresa") or {}).get("nome")},
+        "lacunas": (d.get("lacunas") or [])[:6],
+        "conselho": {k: {c: v.get(c) for c in ("nota", "conviccao", "veredito")} for k, v in pareceres.items() if v},
+        "nota": _json(p / "nota.json"), "notas": notas[-30:],
+        "relatorio": f"/relatorios/{p.name}/relatorio.html" if rel.exists() else None,
+        "fim": rel.stat().st_mtime * 1000 if rel.exists() else None}
+
+
+def anotar(t: str, texto: str) -> None:
+    import datetime as dt
+    with (pasta_analise(t, criar=True) / "notas.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps({"h": dt.datetime.now().strftime("%H:%M:%S"), "txt": texto}, ensure_ascii=False) + "\n")
+
+
+def abrir_analise(t: str) -> str:
+    import datetime as dt
+    p = pasta_analise(t, criar=True)
+    if not (p / "inicio.json").exists():
+        (p / "inicio.json").write_text(json.dumps({"ticker": t.upper(), "inicio": dt.datetime.now().isoformat()}),
+                                       encoding="utf-8")
+    return f"{iniciar()}/?t={t.upper()}&analise=1"
+
+
 def mundo() -> list[dict]:
     return [{**c, "nome": mk.PAINEL_GLOBAL.get(c["t"], ("", c["t"]))[1]} for c in cotacoes(MUNDO)]
 
@@ -158,7 +220,8 @@ class Handler(BaseHTTPRequestHandler):
                  "/api/cotacoes": lambda: cotacoes([x.strip().upper() for x in q.get("t", "").split(",") if x.strip()][:40]),
                  "/api/historico": lambda: historico(q["t"].upper(), q.get("f", "6m") if q.get("f") in FAIXAS else "6m"),
                  "/api/noticias": lambda: noticias(q["t"].upper(), q.get("e")),
-                 "/api/mundo": lambda: mundo()}
+                 "/api/mundo": lambda: mundo(),
+                 "/api/analise": lambda: analise(q["t"])}
         if u.path in rotas:
             with _redirect_stdout():
                 try:
@@ -167,8 +230,9 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as e:  # noqa: BLE001
                     return self._envia(json.dumps({"erro": f"{type(e).__name__}: {e}"}).encode(),
                                        "application/json", 500)
-        arq = (WEB / (u.path.lstrip("/") or "index.html")).resolve()
-        if WEB in arq.parents and arq.is_file():
+        base, rel = (RELATORIOS, u.path[len("/relatorios/"):]) if u.path.startswith("/relatorios/") else (WEB, u.path.lstrip("/"))
+        arq = (base / (rel or "index.html")).resolve()
+        if base.resolve() in arq.parents and arq.is_file():
             return self._envia(arq.read_bytes(), mimetypes.guess_type(arq.name)[0] or "application/octet-stream")
         self._envia(b"nao encontrado", "text/plain", 404)
 
@@ -191,7 +255,10 @@ def iniciar(porta: int = 8765) -> str:
     """Sobe o homebroker numa thread (uma vez por processo) e devolve o endereço."""
     global _servidor
     if _servidor is None:
-        _servidor = ThreadingHTTPServer(("127.0.0.1", porta), Handler)
+        try:
+            _servidor = ThreadingHTTPServer(("127.0.0.1", porta), Handler)
+        except OSError:   # porta ocupada: outra sessão do Claude já serve o homebroker com os mesmos dados
+            return f"http://127.0.0.1:{porta}"
         threading.Thread(target=_servidor.serve_forever, daemon=True).start()
     return f"http://127.0.0.1:{_servidor.server_address[1]}"
 
