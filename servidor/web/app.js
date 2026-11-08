@@ -1,5 +1,6 @@
 "use strict";
 const $ = s => document.querySelector(s);
+const html = (sel, h) => { const el = $(sel); if (el._h !== h) { el.innerHTML = h; el._h = h; } };  // só redesenha o que mudou
 const api = p => fetch(p).then(r => r.json());
 const fmt = (v, c = 2) => v == null || isNaN(v) ? "—" : v.toLocaleString("pt-BR", {minimumFractionDigits: c, maximumFractionDigits: c});
 const pct = v => v == null ? "—" : (v >= 0 ? "+" : "") + fmt(v * 100, 2) + "%";
@@ -90,13 +91,14 @@ function desenhar() {
   const cor = ys.at(-1) >= ys[0] ? "var(--up)" : "var(--dn)";
   const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
   const grade = [0, .25, .5, .75, 1].map(f => { const v = lo - pad + f * (hi - lo + 2 * pad);
-    return `<line x1="${L}" x2="${R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--ln)"/><text x="${R + 6}" y="${y(v) + 4}" fill="var(--mu)" font-size="11" font-family="var(--mono)">${fmt(v)}</text>`; }).join("");
+    return `<line x1="${L}" x2="${R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--sep)" stroke-dasharray="2 4"/><text x="${R + 8}" y="${y(v) + 4}" fill="var(--tx3)" font-size="11">${fmt(v)}</text>`; }).join("");
   const dt = ts => new Date(ts * 1000).toLocaleDateString("pt-BR", S.faixa === "1d" ? {hour: "2-digit", minute: "2-digit"} : {day: "2-digit", month: "short", year: S.faixa === "5a" ? "2-digit" : undefined});
   const eixos = [0, Math.floor(pts.length / 2), pts.length - 1].map((i, k) =>
     `<text x="${x(i)}" y="${H - 5}" fill="var(--mu)" font-size="11" text-anchor="${["start", "middle", "end"][k]}">${dt(pts[i][0])}</text>`).join("");
-  svg.innerHTML = `${grade}${eixos}<path d="${d}L${R},${B}L${L},${B}Z" fill="${cor}" opacity=".08"/>
-    <path d="${d}" fill="none" stroke="${cor}" stroke-width="1.6"/><line id="cx" y1="${T}" y2="${B}" stroke="var(--mu)" stroke-dasharray="3 3" visibility="hidden"/>
-    <circle id="cp" r="3.5" fill="${cor}" visibility="hidden"/>`;
+  svg.innerHTML = `<defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cor}" stop-opacity=".32"/><stop offset="1" stop-color="${cor}" stop-opacity="0"/></linearGradient></defs>
+    ${grade}${eixos}<path d="${d}L${R},${B}L${L},${B}Z" fill="url(#ga)"/>
+    <path d="${d}" fill="none" stroke="${cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><line id="cx" y1="${T}" y2="${B}" stroke="var(--mu)" stroke-dasharray="3 3" visibility="hidden"/>
+    <circle id="cp" r="5" fill="${cor}" stroke="var(--tx)" stroke-width="2" visibility="hidden"/>`;
   svg.onmousemove = e => {
     const r = svg.getBoundingClientRect(), i = Math.max(0, Math.min(pts.length - 1, Math.round((e.clientX - r.left - L) / (R - L) * (pts.length - 1))));
     const px = x(i), py = y(pts[i][1]), tip = $("#tip");
@@ -167,6 +169,15 @@ $("#busca").addEventListener("submit", e => {
   $("#novo").value = ""; selecionar(t);
 });
 addEventListener("resize", desenhar);
+// brilho do vidro acompanha o ponteiro (como a luz no Liquid Glass)
+let rafBrilho = 0;
+document.addEventListener("pointermove", e => {
+  if (rafBrilho) return;
+  rafBrilho = requestAnimationFrame(() => { rafBrilho = 0;
+    const g = e.target.closest?.(".glass"); if (!g) return;
+    const r = g.getBoundingClientRect();
+    g.style.setProperty("--mx", `${e.clientX - r.left}px`); g.style.setProperty("--my", `${e.clientY - r.top}px`); });
+}, {passive: true});
 
 // ---------------- análise ao vivo (lê os arquivos que cada etapa grava; o Claude escreve os comentários)
 const PASSOS = [["coleta", "Coleta de dados"], ["noticias", "Notícias e rumores"], ["exploracao", "Exploração"],
@@ -182,27 +193,28 @@ async function live() {
   const e = a.etapas, feito = k => k === "conselho" ? e.conselho >= 3 : e[k];
   const atual = PASSOS.find(([k]) => !feito(k))?.[0];
   $("#live-st").textContent = e.relatorio ? "Análise concluída" : "Análise em andamento";
+  $("#live-st").classList.toggle("fim", !!e.relatorio);
   $("#live-tit").textContent = `${t}${a.metricas.empresa ? " · " + a.metricas.empresa : ""}`;
-  $("#passos").innerHTML = PASSOS.map(([k, n]) => `<li class="${feito(k) ? "ok" : k === atual ? "agora" : ""}">${n}${k === "conselho" && e.conselho && e.conselho < 3 ? ` ${e.conselho}/3` : ""}</li>`).join("");
+  html("#passos", PASSOS.map(([k, n]) => `<li class="${feito(k) ? "ok" : k === atual ? "agora" : ""}">${n}${k === "conselho" && e.conselho && e.conselho < 3 ? ` ${e.conselho}/3` : ""}</li>`).join(""));
   if (a.inicio) {
     const fim = a.fim || Date.now(), seg = Math.max(0, (fim - new Date(a.inicio)) / 1000);
     $("#live-tempo").textContent = `${Math.floor(seg / 60)}:${String(Math.floor(seg % 60)).padStart(2, "0")}`;
     $(".timer").classList.toggle("over", seg > 300);
   }
   const m = a.metricas;
-  $("#live-num").innerHTML = [["Preço", fmt(m.preco)], ["P/L", fmt(m.p_l, 1)], ["P/VP", fmt(m.p_vp, 2)],
+  html("#live-num", [["Preço", fmt(m.preco)], ["P/L", fmt(m.p_l, 1)], ["P/VP", fmt(m.p_vp, 2)],
     ["Dividend yield", m.dy == null ? "—" : pct(m.dy).replace("+", "")], ["Volatilidade a.a.", m.vol == null ? "—" : pct(m.vol).replace("+", "")],
     ["Retorno a.a.", pct(m.ret)], ["Nº de Graham", fmt(m.graham)], ["Teto Bazin 6%", fmt(m.bazin)]]
-    .filter(([, v]) => v !== "—").map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("") || `<p class="mu">Aguardando a coleta…</p>`;
-  $("#live-cons").innerHTML = ["valor", "macro", "risco"].map(k => { const c = a.conselho[k];
+    .filter(([, v]) => v !== "—").map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("") || `<p class="mu">Aguardando a coleta…</p>`);
+  html("#live-cons", ["valor", "macro", "risco"].map(k => { const c = a.conselho[k];
     return c ? `<div class="an"><b>${NOMES[k]}</b><span class="nt">${fmt(c.nota, 1)}</span><p>${esc(c.veredito || "")}${c.conviccao ? ` · convicção ${esc(c.conviccao)}` : ""}</p></div>`
-      : `<div class="an vazio">${NOMES[k]}: analisando…</div>`; }).join("");
-  $("#live-notas").innerHTML = a.notas.slice().reverse().map(n => `<li><time>${esc(n.h)}</time>${esc(n.txt)}</li>`).join("") || `<li class="mu">Os comentários aparecem aqui enquanto a análise acontece.</li>`;
+      : `<div class="an vazio">${NOMES[k]}: analisando…</div>`; }).join(""));
+  html("#live-notas", a.notas.slice().reverse().map(n => `<li><time>${esc(n.h)}</time>${esc(n.txt)}</li>`).join("") || `<li class="mu">Os comentários aparecem aqui enquanto a análise acontece.</li>`);
   const n = a.nota;
-  $("#live-final").innerHTML = n ? `<h4>Nota final</h4><div class="big">${fmt(n.nota_final, 1)}<small> / 10</small></div>
+  html("#live-final", n ? `<h4>Nota final</h4><div class="big">${fmt(n.nota_final, 1)}<small> / 10</small></div>
     <div class="lei">${esc(n.leitura || "")}</div><div class="mu">quantitativa ${fmt(n.nota_quant, 1)} · conselho ${fmt(n.nota_conselho, 1)} · consenso ${esc(n.consenso)}</div>
     ${(n.travas || []).map(x => `<div class="dn">${esc(x)}</div>`).join("")}${a.relatorio ? `<a class="btn" href="${a.relatorio}" target="_blank">Abrir relatório completo</a>` : ""}`
-    : `<h4>Nota final</h4><p class="mu">Sai depois do conselho.</p>${a.lacunas.length ? `<h4>Lacunas</h4><ul>${a.lacunas.map(x => `<li class="mu">${esc(x)}</li>`).join("")}</ul>` : ""}`;
+    : `<h4>Nota final</h4><p class="mu">Sai depois do conselho.</p>${a.lacunas.length ? `<h4>Lacunas</h4><ul>${a.lacunas.map(x => `<li class="mu">${esc(x)}</li>`).join("")}</ul>` : ""}`);
   clearTimeout(liveT); liveT = setTimeout(live, e.relatorio ? 30e3 : 3e3);
 }
 

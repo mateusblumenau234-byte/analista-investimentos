@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05070b" media="(prefers-color-scheme: dark)">
 <title>Homebroker · Analista</title>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<header class="top">
+<header class="top glass">
   <div class="brand">ANALISTA<span>homebroker</span></div>
   <div class="tape" id="tape" aria-label="Mercados"></div>
   <div class="clock"><span id="b3" class="mk"></span><span id="hora"></span></div>
 </header>
 
-<section class="live" id="live" hidden aria-live="polite">
+<section class="live glass" id="live" hidden aria-live="polite">
   <div class="live-top">
     <div><span class="eyebrow" id="live-st">Análise em andamento</span><h2 id="live-tit">—</h2></div>
     <div class="timer"><b id="live-tempo">0:00</b><span>de 5:00</span></div>
@@ -33,7 +34,7 @@
 </section>
 
 <main class="grid">
-  <aside class="watch" aria-label="Lista de ativos">
+  <aside class="watch glass" aria-label="Lista de ativos">
     <form id="busca" autocomplete="off">
       <input id="novo" placeholder="Adicionar ativo (PETR4, AAPL, ASML.AS)" aria-label="Adicionar ativo">
     </form>
@@ -43,7 +44,7 @@
     <ul id="lista-obs" class="rows"></ul>
   </aside>
 
-  <section class="ativo" aria-live="polite">
+  <section class="ativo glass" aria-live="polite">
     <div class="head">
       <div>
         <div class="tk" id="tk">—</div>
@@ -54,22 +55,22 @@
         <div class="var" id="var"></div>
       </div>
     </div>
-    <div class="faixas" role="tablist" id="faixas">
+    <div class="faixas"><div class="seg" role="tablist" id="faixas">
       <button data-f="1d">1D</button><button data-f="5d">5D</button><button data-f="1m">1M</button>
-      <button data-f="6m" class="on">6M</button><button data-f="1a">1A</button><button data-f="5a">5A</button>
+      <button data-f="6m" class="on">6M</button><button data-f="1a">1A</button><button data-f="5a">5A</button></div>
       <span class="atraso" id="atraso"></span>
     </div>
     <div class="chart" id="chart"><svg id="svg" preserveAspectRatio="none"></svg><div class="tip" id="tip"></div></div>
     <dl class="stats" id="stats"></dl>
   </section>
 
-  <aside class="news" aria-label="Notícias">
+  <aside class="news glass" aria-label="Notícias">
     <h3>Notícias e rumores <small id="news-st"></small></h3>
     <ul id="news" class="news-list"></ul>
   </aside>
 
-  <section class="baixo">
-    <nav class="tabs" role="tablist">
+  <section class="baixo glass">
+    <nav class="tabs seg" role="tablist">
       <button data-tab="t-cart" class="on">Carteira</button>
       <button data-tab="t-mundo">Mundo</button>
       <button data-tab="t-hist">Alertas e análises</button>
