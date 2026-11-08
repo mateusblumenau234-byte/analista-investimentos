@@ -158,8 +158,15 @@ no relatório. Use os gráficos no `RELATORIO.md`.
 ### Passo 1c — Radar de notícias, rumores e contexto mundial
 ```bash
 python "$SKILL/scripts/noticias.py" --empresa "Nome da empresa" --ticker TICKER \
-  --setor "setor em poucas palavras" --saida relatorios/<TICKER>_<data> [--brasil]
+  --setor "setor em poucas palavras" --saida relatorios/<TICKER>_<data> [--brasil] \
+  [--extras relatorios/<TICKER>_<data>/composio_noticias.json]
 ```
+**Composio no radar**: se ferramentas do Composio estiverem na sessão, busque antes as notícias da empresa
+por elas (por exemplo `ALPHA_VANTAGE_NEWS_SENTIMENT` com o ticker, só leitura), grave a resposta como está
+em `relatorios/<TICKER>_<data>/composio_noticias.json` e acrescente `--extras` com esse arquivo ao comando.
+Os itens entram na mesma deduplicação, classificação e pontuação, saem marcados "via Composio" e, quando
+houver, com o sentimento. Sem Composio, rode o comando normalmente.
+
 Use `--brasil` sempre que o ativo for da B3 ou o investidor medir a carteira em reais. O radar busca em
 português e inglês a empresa, o setor e o contexto mundial (Fed, inflação, China, petróleo, tarifas,
 geopolítica, fluxos) e, com `--brasil`, política, fiscal e instituições do Brasil com checagem de fatos.

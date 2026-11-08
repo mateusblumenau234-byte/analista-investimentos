@@ -58,6 +58,10 @@ direto pelo Claude Code:
 /plugin marketplace add ComposioHQ/composio-plugin-cc
 /plugin install composio@composio
 ```
+As notícias trazidas pelo Composio entram no radar de notícias (`noticias.py --extras arquivo.json`):
+passam pela mesma remoção de duplicadas, classificação de rumores e pontuação, e aparecem marcadas
+"via Composio", com o sentimento quando o Alpha Vantage informa.
+
 O Composio é um serviço de terceiros: ao conectar um aplicativo, você dá acesso a ele. Conecte só o que for usar.
 
 Para analisar ações dos EUA, a SEC pede identificação. Defina uma vez:

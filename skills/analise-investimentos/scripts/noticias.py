@@ -3,9 +3,11 @@
 
 Uso:
   python noticias.py --empresa "Apple" --ticker AAPL [--setor "smartphones"] [--dias 30] \
-      [--idiomas pt,en] [--consulta "Apple tarifas China"] --saida relatorios/AAPL_2026-11-07
+      [--idiomas pt,en] [--consulta "Apple tarifas China"] [--extras composio_noticias.json]       --saida relatorios/AAPL_2026-11-07
 
-Fonte: busca do Google Notícias em RSS (pública, sem chave), em português e inglês.
+Fontes: busca do Google Notícias em RSS (pública, sem chave), em português e inglês, e, com --extras,
+notícias que o agente já trouxe por outra ferramenta (por exemplo o Composio, toolkit Alpha Vantage
+NEWS_SENTIMENT). Os itens extras passam pelas mesmas etapas e saem marcados com a origem.
 Etapas, inspiradas no Horizon (Thysrael, MIT): coleta de várias consultas -> remoção de duplicadas
 (mesma manchete em veículos diferentes) -> classificação por tipo -> pontuação por relevância,
 recência e confiabilidade da fonte -> briefing em Markdown.
@@ -219,6 +221,52 @@ def nivel_rumor(it: dict, todos: list[dict], ignorar: set[str] = frozenset()) ->
     return "improvavel"
 
 
+def _data_extra(v) -> str | None:
+    """Aceita ISO 8601, RFC 822 ou o formato do Alpha Vantage (20261107T153000)."""
+    if not v:
+        return None
+    v = str(v)
+    for conv in (lambda x: dt.datetime.strptime(x, "%Y%m%dT%H%M%S").replace(tzinfo=dt.timezone.utc),
+                 lambda x: dt.datetime.fromisoformat(x.replace("Z", "+00:00")),
+                 email.utils.parsedate_to_datetime):
+        try:
+            d = conv(v)
+        except (TypeError, ValueError, IndexError):
+            continue
+        return (d if d.tzinfo else d.replace(tzinfo=dt.timezone.utc)).astimezone(dt.timezone.utc).isoformat()
+    return None
+
+
+def ler_extras(dados, origem: str = "composio") -> list[dict]:
+    """Converte notícias trazidas por outra ferramenta para o formato do radar.
+
+    Aceita uma lista de itens ou um objeto com "feed" (resposta do Alpha Vantage NEWS_SENTIMENT, inclusive
+    quando vem embrulhada pelo Composio em "data"). Campos de cada item: titulo/title, link/url,
+    fonte/source, data/time_published, escopo (empresa, setor, brasil, global ou extra; padrão empresa) e,
+    se houver, sentimento/overall_sentiment_label.
+    """
+    if isinstance(dados, dict):
+        dados = dados.get("data", dados)
+        dados = dados.get("feed", dados.get("itens", [])) if isinstance(dados, dict) else dados
+    itens = []
+    for x in dados if isinstance(dados, list) else []:
+        if not isinstance(x, dict):
+            continue
+        titulo = str(x.get("titulo") or x.get("title") or "").strip()
+        if not titulo:
+            continue
+        escopo = x.get("escopo") if x.get("escopo") in ("empresa", "setor", "brasil", "global", "extra") else "empresa"
+        it = {"titulo": titulo, "link": str(x.get("link") or x.get("url") or ""),
+              "fonte": str(x.get("fonte") or x.get("source") or "").strip(),
+              "data": _data_extra(x.get("data") or x.get("time_published")),
+              "consulta": f"via {origem}", "escopo": escopo, "origem": origem}
+        sent = x.get("sentimento") or x.get("overall_sentiment_label")
+        if sent:
+            it["sentimento"] = str(sent)
+        itens.append(it)
+    return itens
+
+
 def coletar(consultas: list[tuple[str, str, str]], dias: int, baixar) -> list[dict]:
     """consultas: (texto, idioma, escopo). `baixar(url) -> str` é injetável para testes offline."""
     itens = []
@@ -233,8 +281,10 @@ def coletar(consultas: list[tuple[str, str, str]], dias: int, baixar) -> list[di
 
 
 def briefing(itens: list[dict], titulo: str, erros: list[str]) -> str:
+    origens = sorted({it["origem"].capitalize() for it in itens if it.get("origem")})
+    fontes = ", ".join(["Google Notícias (RSS)"] + [f"{o} (itens marcados com \"via {o}\")" for o in origens])
     md = [f"# Radar de notícias: {titulo}", "",
-          f"Coletado em {dt.datetime.now():%d/%m/%Y %H:%M}. Fonte: Google Notícias (RSS). Classificação automática "
+          f"Coletado em {dt.datetime.now():%d/%m/%Y %H:%M}. Fontes: {fontes}. Classificação automática "
           "por palavras-chave, para organizar a leitura: **abra as notícias importantes e confirme na fonte primária**.",
           "", "Legenda: [EXPECTATIVA] = projeções, consenso, recomendações · (+N) = mesma notícia em N outros veículos.",
           "", "Rumores (classificação automática inicial; o agente dá a palavra final):",
@@ -246,6 +296,10 @@ def briefing(itens: list[dict], titulo: str, erros: list[str]) -> str:
             tags += f" **{NIVEIS[it['nivel_rumor']].split(':')[0]}** ({it['nivel_rumor']})"
         d = it["data"][:10] if it.get("data") else "s/d"
         extra = f" (+{len(it['outras_fontes'])})" if it["outras_fontes"] else ""
+        if it.get("origem"):
+            extra += f" · via {it['origem'].capitalize()}"
+        if it.get("sentimento"):
+            extra += f" · sentimento: {it['sentimento']}"
         return f"- {d} · **{it['fonte'] or 'fonte?'}**{extra} · {tags} [{it['titulo']}]({it['link']}) · nota {it['pontuacao']}"
 
     secoes = [("Empresa: fatos (resultados, aquisições, regulação, gestão)",
@@ -297,6 +351,9 @@ def main(argv: list[str] | None = None, baixar=_baixar_http) -> int:
     ap.add_argument("--sem-global", action="store_true", help="Não busca o contexto mundial")
     ap.add_argument("--brasil", action="store_true",
                     help="Inclui política, fiscal e instituições do Brasil (use para ativos da B3 ou investidor em R$)")
+    ap.add_argument("--extras", action="append", default=[],
+                    help="JSON com notícias de outra ferramenta, ex.: Composio/Alpha Vantage (pode repetir)")
+    ap.add_argument("--origem-extras", default="composio", help="Nome da origem dos itens de --extras")
     ap.add_argument("--saida", default=".")
     a = ap.parse_args(argv)
 
@@ -315,6 +372,11 @@ def main(argv: list[str] | None = None, baixar=_baixar_http) -> int:
     cons += [(q, idiomas[0] if idiomas else "pt", "extra") for q in a.consulta]
 
     brutos = coletar(cons, a.dias, baixar)
+    for arq in a.extras:
+        try:
+            brutos += ler_extras(json.loads(Path(arq).read_text(encoding="utf-8")), a.origem_extras)
+        except (OSError, ValueError) as e:
+            brutos.append({"erro": f"extras {arq}: {type(e).__name__}"})
     erros = [x["erro"] for x in brutos if "erro" in x]
     validos = [x for x in brutos if "erro" not in x]
     itens = []

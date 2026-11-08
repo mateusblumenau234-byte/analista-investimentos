@@ -314,6 +314,6 @@ def test_relatorio_html_gera_pagina(tmp_path):
     (tmp_path / "parecer_valor.json").write_text(json.dumps({"analista": "valor", "nota": 6.4, "conviccao": "media",
                                                              "veredito": "ok", "tese": ["[DADO] a"], "riscos": ["b"]}))
     (tmp_path / "RELATORIO.md").write_text("# T\n\n## 1. Resumo\n\n| a | b |\n|---|---|\n| 1 | 2 |\n")
-    out = relatorio_html.main(tmp_path).read_text()
+    out = relatorio_html.main(tmp_path).read_text(encoding="utf-8")
     assert "<title>TESTE3" in out and "Fundamentalista de Valor" in out and "<table>" in out
     assert out.count("<div") == out.count("</div>")

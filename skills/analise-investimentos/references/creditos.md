@@ -23,4 +23,5 @@ orçamento e previsão; o código não pôde ser revisado).
 
 Integração opcional: [Composio](https://docs.composio.dev/docs/claude-code-plugin) (plugin oficial deles para
 Claude Code). A skill não instala o Composio; só usa as ferramentas dele quando o investidor já o instalou e
-conectou, por exemplo o toolkit Alpha Vantage.
+conectou, por exemplo o toolkit Alpha Vantage. Desde a versão 1.1.1, as notícias trazidas por ele entram no
+radar de notícias (`scripts/noticias.py --extras`).

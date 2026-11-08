@@ -111,7 +111,7 @@ def test_radar_de_noticias_e_rumores(tmp_path):
     assert nt.main(["--empresa", "Apple", "--ticker", "AAPL", "--idiomas", "en", "--saida", str(tmp_path)],
                    baixar=baixar) == 0
     assert any("Federal%20Reserve" in u for u in urls)            # contexto mundial também é buscado
-    itens = json.loads((tmp_path / "noticias.json").read_text())
+    itens = json.loads((tmp_path / "noticias.json").read_text(encoding="utf-8"))
     por_link = {i["link"]: i for i in itens}
     assert "http://a/2" not in por_link                            # duplicada (CNBC) foi unida à da Reuters
     assert por_link["http://a/1"]["outras_fontes"] == ["CNBC"]
@@ -120,8 +120,40 @@ def test_radar_de_noticias_e_rumores(tmp_path):
     assert por_link["http://a/7"]["nivel_rumor"] == "improvavel"
     assert "resultado" in por_link["http://a/5"]["tipos"] and "rumor" not in por_link["http://a/5"]["tipos"]
     assert "expectativa" in por_link["http://a/6"]["tipos"]
-    md = (tmp_path / "noticias.md").read_text()
+    md = (tmp_path / "noticias.md").read_text(encoding="utf-8")
     assert "CHANCE QUASE NULA" in md and "rumor mexe no preço mesmo sendo falso" in md
+
+
+def test_radar_integra_noticias_do_composio(tmp_path):
+    agora = dt.datetime.now(dt.timezone.utc)
+    resposta = {"successful": True, "data": {"feed": [         # Alpha Vantage NEWS_SENTIMENT via Composio
+        {"title": "Apple beats quarterly earnings estimates", "url": "http://c/1", "source": "Benzinga",
+         "time_published": agora.strftime("%Y%m%dT%H%M%S"), "overall_sentiment_label": "Bullish"},
+        {"title": "Apple reportedly in talks to buy streaming startup", "url": "http://c/2", "source": "Reuters",
+         "time_published": (agora - dt.timedelta(days=2)).strftime("%Y%m%dT%H%M%S")},
+        {"title": "", "url": "http://c/3"},                       # sem título: ignorado
+    ]}}
+    arq = tmp_path / "composio.json"
+    arq.write_text(json.dumps(resposta), encoding="utf-8")
+    assert nt.main(["--empresa", "Apple", "--idiomas", "en", "--sem-global", "--extras", str(arq),
+                    "--extras", str(tmp_path / "nao_existe.json"), "--saida", str(tmp_path)],
+                   baixar=lambda url: "<rss><channel></channel></rss>") == 0
+    por_link = {i["link"]: i for i in json.loads((tmp_path / "noticias.json").read_text(encoding="utf-8"))}
+    assert set(por_link) == {"http://c/1", "http://c/2"}
+    c1, c2 = por_link["http://c/1"], por_link["http://c/2"]
+    assert c1["origem"] == "composio" and c1["sentimento"] == "Bullish" and "resultado" in c1["tipos"]
+    assert c1["data"].startswith(agora.strftime("%Y-%m-%d"))
+    assert "rumor" in c2["tipos"] and c2["nivel_rumor"] == "provavel"   # Reuters = fonte de referência
+    md = (tmp_path / "noticias.md").read_text(encoding="utf-8")
+    assert "via Composio" in md and "sentimento: Bullish" in md
+    assert "extras" in md and "nao_existe.json" in md                   # arquivo ausente vira falha, não erro
+
+
+def test_ler_extras_aceita_lista_simples():
+    itens = nt.ler_extras([{"titulo": "Petrobras anuncia dividendos", "fonte": "Valor", "escopo": "brasil",
+                            "data": "2026-11-07T10:00:00Z"}, "lixo"], origem="outra")
+    assert len(itens) == 1 and itens[0]["escopo"] == "brasil" and itens[0]["origem"] == "outra"
+    assert itens[0]["data"] == "2026-11-07T10:00:00+00:00"
 
 
 # ---------------------------------------------------------------- várias fontes
