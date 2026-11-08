@@ -180,9 +180,8 @@ def noticias(empresa: str, ticker: str | None = None, setor: str | None = None, 
     nt.main(args)
     md = (pasta / "noticias.md").read_text(encoding="utf-8")
     # resposta enxuta: o briefing completo fica no arquivo (e no homebroker); aqui só o começo, que é o mais relevante
-    return md[:7000] + (f"
-
-[cortado: briefing completo em {pasta / 'noticias.md'}]" if len(md) > 7000 else "")
+    corte = f"\n\n[cortado: briefing completo em {pasta / 'noticias.md'}]"
+    return md[:7000] + (corte if len(md) > 7000 else "")
 
 
 # ---------------------------------------------------------------- análise

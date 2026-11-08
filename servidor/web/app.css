@@ -58,7 +58,7 @@ h4{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--tx3);text-transfor
 h4 small{text-transform:none;letter-spacing:0;font-size:12px}
 
 /* coluna da carteira */
-.watch{position:sticky;top:78px;max-height:calc(100vh - 90px);overflow:auto;padding:6px 6px 10px;scrollbar-width:none}
+.watch{padding:6px 6px 10px;scrollbar-width:none}
 .ola{padding:16px 16px 6px}
 .ola p{margin:0;font-size:22px;font-weight:500;letter-spacing:-.03em;line-height:1.15;color:var(--tx2)}
 .ola p b{color:var(--tx);font-weight:600}
@@ -109,7 +109,7 @@ h4 small{text-transform:none;letter-spacing:0;font-size:12px}
 .stats dt{color:var(--tx3);font-size:12px}.stats dd{margin:3px 0 0;font-size:17px;font-weight:600;letter-spacing:-.02em}
 
 /* notícias */
-.news{position:sticky;top:78px;max-height:calc(100vh - 90px);overflow:auto;scrollbar-width:none;padding-bottom:8px}
+.news{max-height:760px;overflow:auto;scrollbar-width:none;padding-bottom:8px}
 .news-list{list-style:none;margin:0;padding:0 8px;display:grid;gap:6px}
 .news-list li{padding:13px 14px;border-radius:var(--r-md);background:var(--card2);transition:background .2s,transform .12s}
 .news-list li:hover{background:var(--card3)}.news-list li:active{transform:scale(.99)}
