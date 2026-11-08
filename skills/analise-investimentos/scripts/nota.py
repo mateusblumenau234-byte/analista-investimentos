@@ -107,6 +107,7 @@ def consolidar(dados: dict, pareceres: list[dict]) -> dict:
 
 if __name__ == "__main__":
     import sys
+    sys.stdout.reconfigure(encoding="utf-8")   # símbolos como ≤ quebravam o print no Windows
     pasta = Path(sys.argv[1])
     dados = json.loads((pasta / "dados.json").read_text(encoding="utf-8"))
     pareceres = [json.loads(f.read_text(encoding="utf-8")) for f in sorted(pasta.glob("parecer_*.json"))]
