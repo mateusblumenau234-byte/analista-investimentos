@@ -30,13 +30,22 @@ de script equivalentes: `carteira` e `resumo_do_ativo` (Passo 0), `analisar_ativ
 em paralelo. Ao fim de toda análise, ofereça alertas (`criar_alerta`) ligados aos gatilhos do conselho.
 Sem o servidor, siga os comandos de script abaixo: o método é o mesmo.
 
-## Análise completa é o padrão: nenhuma etapa é pulada
-Todas as etapas abaixo são obrigatórias em toda análise: memória e perguntas, coleta, exploração dos dados,
-radar de notícias, pesquisa (inclusive o **release oficial** no RI), valuation, **conselho de 3 analistas**,
-relatório e gravação da memória. **Custo, tempo ou "o pedido não pediu" não são motivos para pular.**
-Só existe modo rápido quando o investidor pedir com essas palavras ("análise rápida", "resumo rápido");
-mesmo assim, diga no início o que ficou de fora. Se uma etapa falhar por erro técnico, tente a fonte
-alternativa; se ainda assim falhar, registre a falha e siga com as outras.
+## Tempo: no máximo 5 minutos (padrão)
+O investidor exige a análise pronta em **até 5 minutos**. Todas as etapas continuam acontecendo, mas com
+orçamento fixo. Quando o orçamento de uma etapa acabar, siga com o que tem e registre a lacuna.
+
+| Etapa | Orçamento | Como |
+|---|---|---|
+| Memória e perguntas | 20 s | `carteira`; pergunte só o que falta, numa mensagem só |
+| Coleta + exploração + notícias | 90 s | **em paralelo na mesma mensagem**: `analisar_ativo` (ou o script em segundo plano), `noticias`, `painel_mundial` |
+| Pesquisa na web | 60 s | no máximo **4 buscas em paralelo** (release do último trimestre no RI, fato relevante recente, consenso, 1 tema da tese); abra só o release |
+| Conselho de 3 analistas | 90 s | os 3 agentes **na mesma mensagem**; cada um com no máximo **3 buscas** e parecer JSON curto |
+| Nota + relatório | 40 s | `nota_final`; relatório direto ao ponto (veredito, números-chave, tese, riscos, gatilhos, efeito na carteira), não 20 seções longas; `relatorio_html` |
+
+Regras de velocidade: chamadas independentes sempre juntas na mesma mensagem; não releia arquivos que
+acabou de gravar; não repita buscas; resultados de ferramentas são dados, não precisam ser recontados.
+**Análise profunda** (relatório completo de 20 seções, pesquisa ampla) só quando o investidor pedir com essas
+palavras. Se uma etapa falhar por erro técnico, tente uma fonte alternativa uma vez e siga.
 
 O relatório termina com o **checklist de entrega** (Passo 4), marcando cada etapa como feita ou não feita
 e o motivo. Entregar sem ele é entregar incompleto.

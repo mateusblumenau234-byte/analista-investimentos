@@ -80,15 +80,16 @@ def _get(url: str, params: dict | None = None, *, tentativas: int = 4, timeout: 
                              headers={"User-Agent": USER_AGENT, "Cache-Control": "no-cache"})
             if r.status_code == 304 or (r.status_code == 200 and not r.content):
                 raise RuntimeError(f"resposta vazia ({r.status_code}) em {r.url}")
-            if r.status_code == 404:
-                raise FonteIndisponivel(f"404 em {r.url}")
+            if r.status_code in (401, 403, 404, 429):   # recusa da fonte: insistir só piora; a próxima fonte assume
+                raise FonteIndisponivel(f"{r.status_code} em {r.url}")
             r.raise_for_status()
             return r
         except FonteIndisponivel:
             raise
         except Exception as e:  # rede, 5xx, 429
             ultimo_erro = e
-            time.sleep(2 ** (i + 1))
+            if i + 1 < tentativas:
+                time.sleep(min(2 ** i, 4))
     raise FonteIndisponivel(f"Falha ao acessar {url}: {ultimo_erro}")
 
 
@@ -291,12 +292,15 @@ def precos(simbolos: list[str], anos: int = 5) -> pd.DataFrame:
 def _precos_yahoo(simbolos: list[str], anos: int = 5) -> tuple[pd.DataFrame | None, list[str]]:
     """Fechamentos ajustados (proventos e desdobramentos) via Yahoo. Devolve (tabela, símbolos que falharam)."""
     import mercados as mk
+    from concurrent.futures import ThreadPoolExecutor
     series, falhas = {}, []
-    for s in simbolos:
+
+    def um(s):
         sym = mk.simbolo_yahoo(s)
         url = YAHOO_URL.format(simbolo=sym)
         try:
-            js = _get(url, {"range": f"{anos}y", "interval": "1d", "includeAdjustedClose": "true"}, tentativas=1).json()
+            js = _get(url, {"range": f"{anos}y", "interval": "1d", "includeAdjustedClose": "true"},
+                      tentativas=1, timeout=15).json()
             res = (js.get("chart") or {}).get("result")
             if not res:
                 raise FonteIndisponivel(f"Sem preços para {sym}")
@@ -308,6 +312,9 @@ def _precos_yahoo(simbolos: list[str], anos: int = 5) -> tuple[pd.DataFrame | No
             PROV.add("Yahoo Finance — preços ajustados", url, sym)
         except Exception:  # noqa: BLE001
             falhas.append(s)
+    with ThreadPoolExecutor(4) as ex:       # poucos pedidos simultâneos: o Yahoo limita rajadas (HTTP 429)
+        list(ex.map(um, simbolos))
+    falhas.sort(key=simbolos.index)
     if not series:
         return None, falhas
     df = pd.DataFrame(series).sort_index()
@@ -346,6 +353,9 @@ def painel_global(anos: int = 1) -> pd.DataFrame:
     """
     import mercados as mk
     import provedores as pv
+    cache = _cache_path(f"painel_global_{anos}.json")
+    if cache.exists() and time.time() - cache.stat().st_mtime < 1800:      # 30 min: o painel muda devagar
+        return pd.read_json(io.StringIO(cache.read_text(encoding="utf-8")), orient="records")
     df, falhas = _precos_yahoo(list(mk.PAINEL_GLOBAL), max(anos, 1))
     df = df if df is not None else pd.DataFrame()
     fonte = {c: "Yahoo" for c in df.columns}
@@ -378,7 +388,10 @@ def painel_global(anos: int = 1) -> pd.DataFrame:
                        "unidade_var": "p.p." if juros else "%", "fonte": fonte.get(sym.upper(), "Yahoo")})
     if falhas:
         PROV.add("Yahoo — painel global (falhas)", "", ", ".join(falhas))
-    return pd.DataFrame(linhas)
+    out = pd.DataFrame(linhas)
+    if not falhas:
+        cache.write_text(out.to_json(orient="records"), encoding="utf-8")
+    return out
 
 
 def rf_yahoo(simbolo: str = "^TNX") -> dict:

@@ -90,3 +90,31 @@ def test_servidor_mcp_expoe_ferramentas(dados):
     assert "Alerta #1" in srv.criar_alerta("PETR4", "preco_acima", 40)
     assert srv.criar_alerta("PETR4", "errado").startswith("Erro: ValueError")   # erro vira texto, não derruba
     assert "PETR4 = 50 cotas a PM 30.00" in srv.registrar_operacao("PETR4", -50, 35.0)   # venda mantém o PM
+
+
+def test_homebroker_api(dados, monkeypatch):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "servidor"))
+    import urllib.request
+    import pandas as pd
+    import provedores as pv
+    import web
+    web._cache.clear()
+    def chart(t, faixa):
+        if t != "PETR4":
+            raise ConnectionError("429")
+        return {"meta": {"regularMarketPrice": 33.0, "chartPreviousClose": 30.0, "currency": "BRL", "shortName": "Petro"},
+                "timestamp": [1, 2, 3], "indicators": {"quote": [{"close": [30.0, None, 33.0]}]}}
+    monkeypatch.setattr(web, "_chart", chart)
+    idx = pd.to_datetime(["2026-11-05", "2026-11-06"])
+    monkeypatch.setattr(pv, "serie", lambda t, a, pular=frozenset(): (pd.Series([200.0, 210.0], index=idx), "stooq", []))
+    q = {c["t"]: c for c in web.cotacoes(["PETR4", "AAPL", "^N225"])}
+    assert q["PETR4"]["p"] == 33.0 and q["PETR4"]["v"] == pytest.approx(0.1)
+    assert q["AAPL"]["f"] == "stooq" and q["AAPL"]["v"] == pytest.approx(0.05)    # reserva quando o Yahoo recusa
+    assert q["^N225"]["p"] is None                                                 # índice nunca vira preço de ETF
+    assert web.historico("PETR4", "6m")["pts"] == [[1, 30.0], [3, 33.0]]
+    url = web.iniciar(0)                                                           # porta livre
+    cart = json.loads(urllib.request.urlopen(url + "/api/carteira").read())
+    assert {p["t"] for p in cart["pos"]} == {"PETR4", "AAPL", "TESOURO SELIC"}
+    assert b"Homebroker" in urllib.request.urlopen(url + "/").read()
+    with pytest.raises(urllib.error.HTTPError):
+        urllib.request.urlopen(url + "/../servidor/analista.py")

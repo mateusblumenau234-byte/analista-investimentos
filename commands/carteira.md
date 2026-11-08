@@ -1,6 +1,6 @@
 ---
-description: Mostra e atualiza a carteira (posições, compras, vendas) e o desempenho
-argument-hint: [ex.: comprei 100 PETR4 a 38,50]
+description: "Mostra e atualiza a carteira (posições, compras, vendas) e o desempenho"
+argument-hint: "[ex.: comprei 100 PETR4 a 38,50]"
 ---
 Use as ferramentas do servidor MCP `analista`.
 - Sem argumentos: chame `carteira`, cote as posições com `cotacao` e mostre posições, resultado sobre o

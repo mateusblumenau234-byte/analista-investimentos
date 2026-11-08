@@ -18,6 +18,7 @@ import argparse
 import datetime as dt
 import json
 import sys
+import time
 import traceback
 from pathlib import Path
 
@@ -114,16 +115,20 @@ class Coletor:
     def __init__(self):
         self.dados: dict = {}
         self.lacunas: list[str] = []
+        self.tempos: dict[str, float] = {}
 
     def etapa(self, nome: str, func, *a, **k):
+        t0 = time.perf_counter()
         try:
-            r = func(*a, **k)
-            return r
+            return func(*a, **k)
         except Exception as e:
             self.lacunas.append(f"{nome}: {type(e).__name__}: {e}")
             if "--debug" in sys.argv:
                 traceback.print_exc()
             return None
+        finally:
+            self.tempos[nome] = round(time.perf_counter() - t0, 1)
+            print(f"[{self.tempos[nome]:6.1f}s] {nome}", file=sys.stderr, flush=True)
 
 
 def main() -> int:

@@ -1,5 +1,5 @@
 ---
-description: Roda o monitor da carteira agora (cotações, alertas, notícias e rumores) e comenta o que importa
+description: "Roda o monitor da carteira agora (cotações, alertas, notícias e rumores) e comenta o que importa"
 ---
 Chame `monitorar` do servidor MCP `analista`. Depois, como especialista:
 1. Destaque primeiro os alertas disparados e os movimentos fortes, explicando a causa provável com as

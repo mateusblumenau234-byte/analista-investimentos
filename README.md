@@ -38,8 +38,14 @@ Claude ferramentas próprias, em qualquer conversa, sem depender de scripts solt
 | `analisar_ativo`, `valuation_dcf`, `nota_final`, `relatorio_html` | coleta completa, DCF com cenários, nota e relatório |
 | `monitorar`, `criar_alerta`, `alertas`, `remover_alerta` | monitor da carteira e alertas de preço, variação e rumor |
 | `painel` | painel visual em HTML: patrimônio no tempo, alocação, posições, alertas e análises |
+| `homebroker` | homebroker local no navegador (http://127.0.0.1:8765): cotações, gráfico de 1 dia a 5 anos, carteira, notícias e rumores, mundo |
 
-Comandos: `/analisar TICKER`, `/carteira`, `/monitor`, `/painel` e `/alerta`. O conselho de três analistas
+Comandos: `/analisar TICKER`, `/homebroker`, `/carteira`, `/monitor`, `/painel` e `/alerta`. A análise tem orçamento
+de **até 5 minutos**: coleta, notícias e os três analistas rodam em paralelo; a análise profunda só sob pedido.
+
+O homebroker também roda sozinho: `python servidor/web.py` e abra http://127.0.0.1:8765. Ele só escuta no
+seu computador e só lê dados; operações e alertas continuam pelo Claude. Quando o Yahoo limita as consultas,
+as cotações vêm do fechamento oficial da B3, do Stooq ou do FRED, com a fonte e a data na tela. O conselho de três analistas
 virou três agentes independentes (`analista-valor`, `analista-macro`, `analista-risco`), que rodam em
 paralelo sem ver o parecer um do outro.
 

@@ -69,11 +69,12 @@ def carteira() -> str:
     linhas, data = mem.ler_carteira()
     pos = [{k: r.get(k) for k in mem.CAMPOS_CARTEIRA} for r in linhas]
     mon = mem.DADOS / "monitor" / "ultimo.md"
-    return json.dumps({"pasta_dados": str(mem.DADOS), "perfil": mem.perfil_texto(), "carteira_atualizada_em": data,
+    perfil = "VAZIO: fazer a entrevista de perfil da skill" if mem.perfil_vazio() else mem.perfil_texto()
+    return json.dumps({"pasta_dados": str(mem.DADOS), "perfil": perfil, "carteira_atualizada_em": data,
                        "posicoes": pos,
                        "alertas_ativos": [f"#{a['id']} {st.descrever(a)}" for a in st.listar_alertas()],
-                       "ultimo_monitor": mon.read_text(encoding="utf-8") if mon.exists() else None,
-                       "ultimas_analises": mem.ler_historico()[-10:]}, ensure_ascii=False, indent=1)
+                       "ultimo_monitor": mon.read_text(encoding="utf-8")[:3000] if mon.exists() else None,
+                       "ultimas_analises": mem.ler_historico()[-10:]}, ensure_ascii=False, separators=(",", ":"))
 
 
 @ferramenta
@@ -127,7 +128,7 @@ def cotacao(tickers: list[str], conferir: bool = False) -> str:
             out[t] = pv.conferir_ultimo_preco(t) if conferir else fx.cotacao_atual(t)
         except Exception as e:  # noqa: BLE001
             out[t] = {"erro": f"{type(e).__name__}: {e}"}
-    return json.dumps(out, ensure_ascii=False, indent=1, default=str)
+    return json.dumps(out, ensure_ascii=False, separators=(",", ":"), default=str)
 
 
 @ferramenta
@@ -143,14 +144,14 @@ def serie_bcb(serie: str, anos: int = 2) -> str:
     import datetime as dt
     import fontes as fx
     s = fx.bcb_sgs(serie, dt.date.today() - dt.timedelta(days=365 * anos))
-    return s.tail(24).to_string()
+    return s.tail(12).to_string()
 
 
 @ferramenta
 def focus(indicador: str = "IPCA") -> str:
     """Expectativas do boletim Focus (IPCA, Selic, PIB Total, Câmbio)."""
     import fontes as fx
-    return _df_texto(fx.bcb_focus(indicador), 40)
+    return _df_texto(fx.bcb_focus(indicador), 12)
 
 
 @ferramenta
@@ -209,7 +210,7 @@ def valuation_dcf(premissas_json: str) -> str:
     p = json.loads(premissas_json)
     base = va.dcf_fcff(p)
     return json.dumps({"base": {k: v for k, v in base.items() if k != "projecao"}, "cenarios": va.cenarios(p)},
-                      ensure_ascii=False, indent=1, default=float)
+                      ensure_ascii=False, separators=(",", ":"), default=float)
 
 
 @ferramenta
@@ -247,7 +248,7 @@ def criar_alerta(ativo: str, tipo: str, valor: float | None = None, nota: str = 
 @ferramenta
 def alertas(incluir_disparados: bool = False) -> str:
     """Lista os alertas (ativos e, se pedido, os que já dispararam)."""
-    return json.dumps(st.listar_alertas(not incluir_disparados), ensure_ascii=False, indent=1)
+    return json.dumps(st.listar_alertas(not incluir_disparados), ensure_ascii=False, separators=(",", ":"))
 
 
 @ferramenta
@@ -262,6 +263,15 @@ def painel() -> str:
     devolve o caminho para abrir no navegador."""
     import painel as pn
     return str(pn.gerar())
+
+
+@ferramenta
+def homebroker() -> str:
+    """Abre o homebroker local (cotações ao vivo, gráfico, carteira, notícias e mundo) e devolve o endereço
+    para o investidor abrir no navegador. Só escuta em 127.0.0.1 e só lê dados."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import web
+    return web.iniciar()
 
 
 if __name__ == "__main__":

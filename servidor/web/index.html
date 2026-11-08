@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Homebroker · Analista</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">ANALISTA<span>homebroker</span></div>
+  <div class="tape" id="tape" aria-label="Mercados"></div>
+  <div class="clock"><span id="b3" class="mk"></span><span id="hora"></span></div>
+</header>
+
+<main class="grid">
+  <aside class="watch" aria-label="Lista de ativos">
+    <form id="busca" autocomplete="off">
+      <input id="novo" placeholder="Adicionar ativo (PETR4, AAPL, ASML.AS)" aria-label="Adicionar ativo">
+    </form>
+    <h3>Carteira</h3>
+    <ul id="lista-cart" class="rows"></ul>
+    <h3>Observando</h3>
+    <ul id="lista-obs" class="rows"></ul>
+  </aside>
+
+  <section class="ativo" aria-live="polite">
+    <div class="head">
+      <div>
+        <div class="tk" id="tk">—</div>
+        <div class="nome" id="nome"></div>
+      </div>
+      <div class="px">
+        <div class="preco" id="preco">—</div>
+        <div class="var" id="var"></div>
+      </div>
+    </div>
+    <div class="faixas" role="tablist" id="faixas">
+      <button data-f="1d">1D</button><button data-f="5d">5D</button><button data-f="1m">1M</button>
+      <button data-f="6m" class="on">6M</button><button data-f="1a">1A</button><button data-f="5a">5A</button>
+      <span class="atraso" id="atraso"></span>
+    </div>
+    <div class="chart" id="chart"><svg id="svg" preserveAspectRatio="none"></svg><div class="tip" id="tip"></div></div>
+    <dl class="stats" id="stats"></dl>
+  </section>
+
+  <aside class="news" aria-label="Notícias">
+    <h3>Notícias e rumores <small id="news-st"></small></h3>
+    <ul id="news" class="news-list"></ul>
+  </aside>
+
+  <section class="baixo">
+    <nav class="tabs" role="tablist">
+      <button data-tab="t-cart" class="on">Carteira</button>
+      <button data-tab="t-mundo">Mundo</button>
+      <button data-tab="t-hist">Alertas e análises</button>
+    </nav>
+    <div id="t-cart" class="tab on">
+      <div class="resumo" id="resumo"></div>
+      <div class="scroll"><table id="tab-cart"></table></div>
+    </div>
+    <div id="t-mundo" class="tab"><div class="scroll"><table id="tab-mundo"></table></div></div>
+    <div id="t-hist" class="tab"><div class="cols"><div><h4>Alertas ativos</h4><ul id="alertas"></ul></div>
+      <div><h4>Últimas análises</h4><ul id="analises"></ul></div></div></div>
+  </section>
+</main>
+<footer class="pe">Dados públicos com atraso (Yahoo Finance, Google Notícias). Operações e alertas pelo Claude. Não é recomendação de investimento.</footer>
+<script src="app.js"></script>
+</body>
+</html>
