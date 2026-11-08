@@ -22,6 +22,14 @@ Descubra o caminho absoluto dela antes do primeiro comando e use-o em todos. Os 
 `relatorios/` na pasta de trabalho atual; a memória do investidor fica em `~/.analise-investimentos/dados/`
 (ou na pasta da variável `ANALISE_DADOS`).
 
+## Ferramentas do app (servidor MCP `analista`)
+Quando as ferramentas do servidor `analista` estiverem na sessão (plugin instalado), prefira-as aos comandos
+de script equivalentes: `carteira` e `resumo_do_ativo` (Passo 0), `analisar_ativo` (coleta e exploração),
+`noticias` (radar, com `extras_composio`), `valuation_dcf`, `nota_final`, `relatorio_html`,
+`registrar_analise`. Para o conselho, use os agentes `analista-valor`, `analista-macro` e `analista-risco`
+em paralelo. Ao fim de toda análise, ofereça alertas (`criar_alerta`) ligados aos gatilhos do conselho.
+Sem o servidor, siga os comandos de script abaixo: o método é o mesmo.
+
 ## Análise completa é o padrão: nenhuma etapa é pulada
 Todas as etapas abaixo são obrigatórias em toda análise: memória e perguntas, coleta, exploração dos dados,
 radar de notícias, pesquisa (inclusive o **release oficial** no RI), valuation, **conselho de 3 analistas**,
@@ -314,6 +322,9 @@ Esta skill roda comandos no computador de quem usa. Por isso:
 5. Não dê recomendação categórica sem explicitar incertezas, premissas e riscos.
 
 ## Arquivos
+- `scripts/estado.py`: banco do app (patrimônio por dia, alertas e linha do tempo) em `estado.db`.
+- `scripts/monitor.py`: monitor diário da carteira (cotações, alertas, notícias e rumores).
+- `scripts/painel.py`: painel do investidor em HTML local.
 - `scripts/memoria.py`: memória do investidor (resumo e perguntas, pesos reais da carteira, atualizar, compra, registrar).
 - `modelos/`: perfil, carteira e histórico em branco, copiados para `~/.analise-investimentos/dados/` no primeiro uso.
 - `scripts/provedores.py`: várias fontes de preço em cadeia (Yahoo, Stooq, Alpha Vantage, brapi, B3), conferência cruzada e FRED.
@@ -337,4 +348,5 @@ Esta skill roda comandos no computador de quem usa. Por isso:
 - `references/fontes.md`: os endpoints e a hierarquia de confiança das fontes.
 - `references/premissas_exemplo.json`: o modelo de premissas do DCF.
 - `tests/test_memoria.py` e `tests/test_global.py`: testes da memória, fórmulas, mercados, SEC, câmbio e notícias.
+- `tests/test_app.py`: testes do app (estado, alertas, monitor, painel e servidor MCP).
 - `tests/test_motor.py`: testes offline com dados sintéticos (`python -m pytest "$SKILL/tests" -q`).

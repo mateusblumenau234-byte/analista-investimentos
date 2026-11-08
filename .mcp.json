@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "analista": {
+      "command": "python",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/servidor/analista.py"]
+    }
+  }
+}

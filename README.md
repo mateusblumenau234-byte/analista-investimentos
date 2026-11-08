@@ -25,6 +25,32 @@ REITs de qualquer bolsa do mundo** (B3, EUA, Europa, Ásia e outras). Você mand
    risco), nota de 0 a 10 e a separação entre dado observado, estimativa, premissa, interpretação e conclusão.
 6. **Grava a memória** para a próxima vez.
 
+## O app: mais que uma skill
+O plugin instala também um **servidor MCP** (`servidor/analista.py`) que roda no seu computador e dá ao
+Claude ferramentas próprias, em qualquer conversa, sem depender de scripts soltos:
+
+| Ferramenta | O que faz |
+|---|---|
+| `carteira`, `resumo_do_ativo` | perfil, posições, alertas, último monitor e histórico de análises |
+| `registrar_posicao`, `registrar_operacao`, `registrar_analise` | carteira persistente (compras, vendas, preço médio) |
+| `cotacao`, `painel_mundial`, `serie_bcb`, `focus` | cotações de qualquer bolsa com conferência em duas fontes, mundo, Selic, IPCA, Focus |
+| `noticias` | radar de notícias e rumores, com as notícias do Composio quando conectado |
+| `analisar_ativo`, `valuation_dcf`, `nota_final`, `relatorio_html` | coleta completa, DCF com cenários, nota e relatório |
+| `monitorar`, `criar_alerta`, `alertas`, `remover_alerta` | monitor da carteira e alertas de preço, variação e rumor |
+| `painel` | painel visual em HTML: patrimônio no tempo, alocação, posições, alertas e análises |
+
+Comandos: `/analisar TICKER`, `/carteira`, `/monitor`, `/painel` e `/alerta`. O conselho de três analistas
+virou três agentes independentes (`analista-valor`, `analista-macro`, `analista-risco`), que rodam em
+paralelo sem ver o parecer um do outro.
+
+**Rodar sozinho**: o monitor cota a carteira, grava o patrimônio do dia, confere os alertas e varre notícias
+e rumores de cada posição. Agende uma tarefa diária no Claude (app desktop: Tarefas agendadas) com o pedido
+"rode /monitor e me avise do que importa", ou rode `python skills/analise-investimentos/scripts/monitor.py`
+pelo Agendador de Tarefas do Windows ou pelo cron.
+
+O painel fica em `~/.analise-investimentos/painel.html` e o banco do app em
+`~/.analise-investimentos/dados/estado.db`. Os dois ficam só no seu computador.
+
 ## Instalação
 
 Requisitos: [Claude Code](https://code.claude.com) e Python 3.10 ou mais novo.
@@ -38,8 +64,12 @@ Ou em dois passos:
 /plugin marketplace add mateusblumenau234-byte/analista-investimentos
 /plugin install analise-investimentos@analista-investimentos
 ```
-Na primeira análise o Claude instala as bibliotecas Python da skill (`requirements.txt`: numpy, pandas,
-requests, markdown, matplotlib).
+Instale as bibliotecas Python antes do primeiro uso (o servidor MCP precisa delas para iniciar):
+```bash
+pip install -r skills/analise-investimentos/requirements.txt
+```
+(numpy, pandas, requests, markdown, matplotlib e mcp). Depois reinicie o Claude Code e confira em `/mcp` que o
+servidor `analista` está conectado.
 
 ### Fontes de dados extras (opcionais, gratuitas)
 Sem nenhuma chave o analista já usa Yahoo, Stooq, FRED, CVM, B3 e Banco Central. Com chaves gratuitas,
@@ -51,13 +81,15 @@ export BRAPI_TOKEN="seu-token"            # brapi.dev (B3)
 No Windows (PowerShell), para ficar salvo: `setx ALPHAVANTAGE_API_KEY "sua-chave"` e abra um terminal novo.
 
 ### Composio (opcional)
-Com o plugin do [Composio](https://docs.composio.dev/docs/claude-code-plugin), o analista também pode usar o
-toolkit Alpha Vantage (cotações, balanços, notícias com sentimento, opções, commodities, dados econômicos)
-direto pelo Claude Code:
+O analista usa o [Composio](https://composio.dev) quando ele está conectado ao Claude, por exemplo o toolkit
+Alpha Vantage (cotações, balanços, notícias com sentimento, opções, commodities, dados econômicos). O jeito
+mais simples, que funciona também no Windows, é adicionar o servidor MCP deles:
 ```
-/plugin marketplace add ComposioHQ/composio-plugin-cc
-/plugin install composio@composio
+claude mcp add --transport http composio https://connect.composio.dev/mcp
 ```
+e autorizar em `/mcp`. Há também o [plugin oficial](https://github.com/ComposioHQ/composio-plugin-cc)
+(`/plugin marketplace add ComposioHQ/composio-plugin-cc`).
+
 As notícias trazidas pelo Composio entram no radar de notícias (`noticias.py --extras arquivo.json`):
 passam pela mesma remoção de duplicadas, classificação de rumores e pontuação, e aparecem marcadas
 "via Composio", com o sentimento quando o Alpha Vantage informa.
@@ -88,7 +120,8 @@ qualquer repositório**. Para guardar em outro lugar, defina `ANALISE_DADOS`. Os
 ## Segurança
 Skills e plugins rodam comandos no seu computador, então **leia o código antes de instalar qualquer um**,
 inclusive este. Este plugin:
-- só executa os próprios scripts (`skills/analise-investimentos/scripts/`), que você pode ler;
+- só executa os próprios scripts (`skills/analise-investimentos/scripts/`) e o próprio servidor MCP
+  (`servidor/analista.py`), que você pode ler;
 - acessa a rede para baixar dados públicos (CVM, SEC, B3, Banco Central, Tesouro, Yahoo, Damodaran,
   Crossref, Google Notícias) e as páginas que o Claude pesquisa;
 - não lê credenciais nem arquivos fora do projeto e da pasta da memória;
@@ -100,6 +133,7 @@ Encontrou um problema de segurança? Abra uma issue.
 ```bash
 pip install -r skills/analise-investimentos/requirements.txt
 python -m pytest skills/analise-investimentos/tests -q
+claude mcp add analista -- python servidor/analista.py   # usar o servidor fora do plugin
 claude plugin validate .
 ```
 Abrindo este repositório como projeto, `.claude/settings.json` libera buscas na web e a execução dos
