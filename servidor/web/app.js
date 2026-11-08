@@ -57,11 +57,13 @@ function cabecalho() {
   const q = S.q[S.sel] || {};
   $("#tk").textContent = S.sel || "—";
   $("#nome").textContent = q.n && q.n !== S.sel ? q.n : "";
-  $("#preco").textContent = q.p == null ? "—" : fmt(q.p) + " " + (q.m || "");
+  const [int, dec] = q.p == null ? ["—", ""] : fmt(q.p).split(",");
+  $("#preco").innerHTML = `${q.m ? `<small>${esc(q.m)}</small> ` : ""}${int}${dec ? `<small>,${dec}</small>` : ""}`;
+  $("#hero").className = "hero " + (q.v == null ? "" : q.v >= 0 ? "pos" : "neg");
   $("#atraso").textContent = q.f ? `fechamento de ${new Date(q.d + "T12:00").toLocaleDateString("pt-BR")} · fonte ${q.f.toUpperCase()}` :
     q.h ? "atualizado " + new Date(q.h * 1000).toLocaleTimeString("pt-BR", {hour: "2-digit", minute: "2-digit"}) + " · atraso ~15 min" :
     q.erro ? "sem cotação agora: as fontes recusaram, tente em alguns minutos" : "";
-  $("#var").innerHTML = q.v == null ? "" : `<span class="${cls(q.v)}">${pct(q.v)} ${q.f ? "no último pregão" : "no dia"}</span>`;
+  $("#var").textContent = q.v == null ? "sem variação disponível" : `${pct(q.v)} ${q.f ? "no último pregão" : "hoje"}`;
   const pos = S.cart.find(p => p.t === S.sel), st = [
     ["Mín. / máx. do dia", `${fmt(q.min)} / ${fmt(q.max)}`], ["Mín. / máx. 52 sem.", `${fmt(q.min52)} / ${fmt(q.max52)}`]];
   const pts = S.hist?.t === S.sel ? S.hist.pts : [];
@@ -138,6 +140,9 @@ async function carteira() {
   d.pos.forEach(p => { if (p.p != null) S.q[p.t] = {...S.q[p.t], t: p.t, p: p.p, v: p.v, m: p.m, n: S.q[p.t]?.n}; });
   const vals = d.pos.map(p => p.q ? p.q * (p.p ?? p.pm ?? 0) : 0), tot = vals.reduce((a, b) => a + b, 0);
   const custo = d.pos.reduce((a, p) => a + (p.q && p.pm ? p.q * p.pm : 0), 0);
+  $("#ola-total").innerHTML = (() => { const [i, d] = fmt(tot).split(","); return `${i}<small>,${d}</small>`; })();
+  $("#ola-res").textContent = custo ? `${pct(tot / custo - 1)} sobre o custo` : "";
+  $("#ola-res").className = "chip " + cls(tot / custo - 1);
   $("#resumo").innerHTML = [["Valor", fmt(tot)], ["Custo", fmt(custo)],
     ["Resultado", `<span class="${cls(tot / custo - 1)}">${custo ? pct(tot / custo - 1) : "—"}</span>`],
     ["Posições", d.pos.length], ["Registro", d.data || "—"]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join("");

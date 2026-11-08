@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#05070b" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)">
 <title>Homebroker · Analista</title>
 <link rel="stylesheet" href="app.css">
 </head>
@@ -14,7 +14,7 @@
   <div class="clock"><span id="b3" class="mk"></span><span id="hora"></span></div>
 </header>
 
-<section class="live glass" id="live" hidden aria-live="polite">
+<section class="live card" id="live" hidden aria-live="polite">
   <div class="live-top">
     <div><span class="eyebrow" id="live-st">Análise em andamento</span><h2 id="live-tit">—</h2></div>
     <div class="timer"><b id="live-tempo">0:00</b><span>de 5:00</span></div>
@@ -34,7 +34,8 @@
 </section>
 
 <main class="grid">
-  <aside class="watch glass" aria-label="Lista de ativos">
+  <aside class="watch card" aria-label="Lista de ativos">
+    <div class="ola"><p><b>Olá!</b> Sua carteira hoje</p><div class="total" id="ola-total">—</div><span class="chip" id="ola-res"></span></div>
     <form id="busca" autocomplete="off">
       <input id="novo" placeholder="Adicionar ativo (PETR4, AAPL, ASML.AS)" aria-label="Adicionar ativo">
     </form>
@@ -44,16 +45,11 @@
     <ul id="lista-obs" class="rows"></ul>
   </aside>
 
-  <section class="ativo glass" aria-live="polite">
-    <div class="head">
-      <div>
-        <div class="tk" id="tk">—</div>
-        <div class="nome" id="nome"></div>
-      </div>
-      <div class="px">
-        <div class="preco" id="preco">—</div>
-        <div class="var" id="var"></div>
-      </div>
+  <section class="ativo card" aria-live="polite">
+    <div class="hero" id="hero">
+      <div class="hero-top"><span class="tk" id="tk">—</span><span class="nome" id="nome"></span></div>
+      <div class="preco" id="preco">—</div>
+      <span class="chip" id="var"></span>
     </div>
     <div class="faixas"><div class="seg" role="tablist" id="faixas">
       <button data-f="1d">1D</button><button data-f="5d">5D</button><button data-f="1m">1M</button>
@@ -64,12 +60,12 @@
     <dl class="stats" id="stats"></dl>
   </section>
 
-  <aside class="news glass" aria-label="Notícias">
+  <aside class="news card" aria-label="Notícias">
     <h3>Notícias e rumores <small id="news-st"></small></h3>
     <ul id="news" class="news-list"></ul>
   </aside>
 
-  <section class="baixo glass">
+  <section class="baixo card">
     <nav class="tabs seg" role="tablist">
       <button data-tab="t-cart" class="on">Carteira</button>
       <button data-tab="t-mundo">Mundo</button>

@@ -1,6 +1,6 @@
 {
   "name": "analise-investimentos",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Analista de investimentos pessoal para ações de qualquer bolsa: memória do investidor, dados em tempo real (CVM, SEC, bancos centrais, painel mundial), notícias e rumores classificados por credibilidade, valuation e Markowitz na carteira real. Inclui servidor MCP com carteira persistente, alertas, monitor diário e painel.",
   "author": { "name": "mateusblumenau234-byte" },
   "homepage": "https://github.com/mateusblumenau234-byte/analista-investimentos",
