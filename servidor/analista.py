@@ -54,7 +54,9 @@ def ferramenta(fn):
 
 
 def _rodar_script(nome: str, args: list[str], timeout: int = 900) -> str:
+    # stdin isolado (o do processo é o canal do MCP) e saída em UTF-8 (acentos e símbolos no Windows)
     r = subprocess.run([sys.executable, str(SCRIPTS / nome), *args], capture_output=True, text=True,
+                       stdin=subprocess.DEVNULL, env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"},
                        encoding="utf-8", errors="replace", timeout=timeout, cwd=str(RELATORIOS.parent))
     saida = (r.stdout + ("\n" + r.stderr if r.returncode else "")).strip()
     return saida[-6000:]
@@ -176,7 +178,11 @@ def noticias(empresa: str, ticker: str | None = None, setor: str | None = None, 
         (pasta / "extras.json").write_text(extras_composio, encoding="utf-8")
         args += ["--extras", str(pasta / "extras.json")]
     nt.main(args)
-    return (pasta / "noticias.md").read_text(encoding="utf-8")
+    md = (pasta / "noticias.md").read_text(encoding="utf-8")
+    # resposta enxuta: o briefing completo fica no arquivo (e no homebroker); aqui só o começo, que é o mais relevante
+    return md[:7000] + (f"
+
+[cortado: briefing completo em {pasta / 'noticias.md'}]" if len(md) > 7000 else "")
 
 
 # ---------------------------------------------------------------- análise
