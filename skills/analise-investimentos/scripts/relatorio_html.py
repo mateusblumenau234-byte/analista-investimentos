@@ -143,9 +143,10 @@ def heatmap(csv: Path, preco: float | None) -> str:
 def card_analista(p: dict) -> str:
     a = p.get("analista", "?")
     n = p.get("nota")
-    tese = "".join(f"<li>{e(t)}</li>" for t in (p.get("tese") or []))
-    riscos = "".join(f"<li>{e(t)}</li>" for t in (p.get("riscos") or []))
-    gat = "".join(f"<li>{e(t)}</li>" for t in (p.get("gatilhos_para_mudar_de_opiniao") or []))
+    def itens(k):  # analistas às vezes mandam texto em vez de lista
+        v = p.get(k) or []
+        return "".join(f"<li>{e(t)}</li>" for t in ([v] if isinstance(v, str) else v))
+    tese, riscos, gat = itens("tese"), itens("riscos"), itens("gatilhos_para_mudar_de_opiniao")
     return f"""<article class="analyst">
   <header><div><h3>{e(NOMES.get(a, a))}</h3><p class="school">{e(ESCOLA.get(a, ""))}</p></div>
   <div class="score {faixa(n)}"><b>{num(n)}</b><span>/10</span></div></header>
