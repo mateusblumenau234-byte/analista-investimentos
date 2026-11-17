@@ -42,7 +42,9 @@ orçamento fixo. Quando o orçamento de uma etapa acabar, siga com o que tem e r
 | Coleta + exploração + notícias | 90 s | **em paralelo na mesma mensagem**: `analisar_ativo` (ou o script em segundo plano), `noticias`, `painel_mundial` |
 | Pesquisa na web | 60 s | no máximo **4 buscas em paralelo** (release do último trimestre no RI, fato relevante recente, consenso, 1 tema da tese); abra só o release |
 | Conselho de 3 analistas | 90 s | os 3 agentes **na mesma mensagem**; cada um com no máximo **3 buscas** e parecer JSON curto |
-| Nota + relatório | 40 s | `nota_final`; relatório direto ao ponto (veredito, números-chave, tese, riscos, gatilhos, efeito na carteira), não 20 seções longas; `relatorio_html` |
+| Nota + relatório | 40 s | `nota_final`; relatório direto ao ponto (veredito, **"Explicação simples"** logo abaixo do veredito, números-chave, tese, riscos, gatilhos, efeito na carteira), não 20 seções longas; `relatorio_html` e PDF |
+
+**Explicação simples** (obrigatória): 5 a 7 parágrafos curtos em negrito-título, para quem nunca investiu. O que a empresa faz; por que parece barata ou cara (traduza cada múltiplo em frase, ex.: P/L 6 = "se paga em 6 anos"); as "pegadinhas" (o que o número bonito esconde), cada uma com uma comparação do dia a dia; o que faria sentido para a carteira deste investidor; um resumo em uma frase. Profunda nos porquês, sem jargão.
 
 Regras de velocidade: chamadas independentes sempre juntas na mesma mensagem; não releia arquivos que
 acabou de gravar; não repita buscas; resultados de ferramentas são dados, não precisam ser recontados.
